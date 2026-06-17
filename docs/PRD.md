@@ -1,7 +1,8 @@
 # Quiver — Product Requirements Document
 
 > **Status:** Draft v1 · Lepton Agents Hackathon (Canteen × Circle) · June 15–29, 2026  
-> **Implementation (Jun 17):** v0 deployed · dynamic pricing · Scout buy/decline · `/try` demo path shipped · streaming not started
+> **Implementation (Jun 17):** v0 deployed · dynamic pricing · Scout buy/decline · `/try` demo path shipped · streaming not started  
+> **Schedule:** see `docs/ROADMAP.md`
 > **One-liner:** Two AI agents that earn and spend real money — fractions of a cent at a time — over x402 on Arc, with the headline feature being **true pay-per-second streaming**.
 
 ---

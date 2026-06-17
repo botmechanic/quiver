@@ -46,7 +46,7 @@ flowchart LR
 - **Settlement:** Circle Gateway batched settlement on Arc testnet.
 - **Persistence:** Cloud Supabase `payment_events` (source tagged in `raw.source`: `demo` | `scout`).
 - **Dashboard:** payments table with source badges, demo vs Scout metrics, Gateway balance, withdrawals.
-- **Grounding document:** `docs/PRD.md` is the product source of truth.
+- **Grounding document:** `docs/PRD.md` is the product source of truth; `docs/ROADMAP.md` tracks what's shipped and what's next.
 
 Circle Gateway requires a long enough authorization window for batched settlement. Quiver uses `maxTimeoutSeconds = 604900` (7 days plus buffer) in `lib/x402.ts`.
 
