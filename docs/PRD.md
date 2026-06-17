@@ -1,0 +1,142 @@
+# Quiver — Product Requirements Document
+
+> **Status:** Draft v1 · Lepton Agents Hackathon (Canteen × Circle) · June 15–29, 2026
+> **One-liner:** Two AI agents that earn and spend real money — fractions of a cent at a time — over x402 on Arc, with the headline feature being **true pay-per-second streaming**.
+
+---
+
+## 1. Context & Goal
+
+Quiver is a submission for the **Lepton Agents Hackathon** (Canteen × Circle), a two-week online builder series (June 15–29, 2026) focused on **nanopayments**: AI agents that pay, receive, and stream value at sub-cent scale, settling on **Arc** (Circle's stablecoin-native L1) via the **x402** protocol and **Circle Gateway** batched settlement.
+
+**Judging axes (design every decision against these):**
+- **Agentic sophistication — 30%.** How much the AI genuinely *decides*. Full autonomy > meaningful agency > AI-flavored automation.
+- **Traction — 30%.** Real users, real payments, real volume *during the event window*. The submission form asks for these numbers directly.
+- **Circle tool usage — 20%.** x402, Gateway, Circle Wallets, Arc.
+- **Innovation — 20%.** Novelty versus what already exists.
+
+This round leans toward **RFB 6 (Creator & Publisher Monetization)**.
+
+**Primary goal:** Win or place by occupying the one axis no prior-cohort winner did — streaming — while matching the proven baseline (verifiable output, economic accountability, clean on-chain stats) that the previous (Agora) cohort rewarded.
+
+**Non-goals:** Mainnet deployment. A production trading product. Out-trading efficient markets. Heavyweight cryptographic verification (Merkle-DAG/Irys-style) — explicitly out of scope for the two-week window.
+
+---
+
+## 2. Competitive Landscape (why the scope is what it is)
+
+The prior Agora cohort results (published June 16, 2026) revealed three winning clusters, **all of which Quiver overlaps** — so concept alone is not a differentiator:
+
+- **Reasoning as the product** (Mimir 1st, OpenMind, ReasoningReceipt) — verifiable reasoning, settled on-chain. **Now table stakes, not a headline.**
+- **Agents funding their own signals** (Drip, Funding Farmer) — close to Quiver's "earn and spend" core. **Contested lane.**
+- **Agent-to-agent commerce** (ArkAge: agents hire/pay/judge each other; Forum: covenant accounts). **Also contested.**
+- Recurring judged value: **adversarial robustness.**
+
+**The white space:** **pay-per-second streaming over x402** appears in none of the winning projects or the organizer's named themes. The Lepton brief independently flags streaming as a real code gap. This is Quiver's anchor. Reference implementation (`circlefin/arc-nanopayments`) and the leading comparable (ReasoningReceipt, `github.com/tang-vu/reasoning-receipt`) both ship only **discrete** per-call payments — no streaming.
+
+**Strategic consequence:** Frame Quiver as *the streaming nanopayments project*, with trade-signal agents as the vehicle — not as a trade-signal agent that happens to stream.
+
+---
+
+## 3. Users
+
+- **Archer (seller agent)** — produces trading-signal hunches, sells them over x402, prices itself dynamically, and ships a verifiable reasoning trace with each signal.
+- **Scout (buyer agent)** — operates on a daily budget; reads each signal's reasoning and decides, per call, whether it is worth the quoted price.
+- **Human consumers** — hackathon peers and the builder's existing community (ATC / Skool members), onboarded as real paying users of Archer's endpoints during the window. **This audience is the core traction advantage** — the prior comparable converted only ~19 payers / $0.18 settled, so tens of payers and sub-dollar volume is a beatable, realistic bar.
+- **Judges** — evaluate via a deployed link, README, and a <3-minute demo video without the builder present.
+
+---
+
+## 4. Core Features
+
+### 4.1 Archer — the selling agent (discrete endpoints)
+x402-protected endpoints that sell Archer's output per call, settling sub-cent on Arc via Gateway:
+- `signal` — latest strategy signal (~$0.001)
+- `market-state` — market snapshot (~$0.0001)
+- `compute` (POST) — on-demand deeper analysis (priced higher; see dynamic pricing)
+
+Each endpoint returns the result **plus a verifiable reasoning trace** (see 4.4). Maps onto the starter's `/api/premium/quote | dataset | compute` routes, reskinned.
+
+### 4.2 Dynamic pricing (agentic 30%)
+Archer sets price per request as a genuine decision, on two axes:
+- **Compute-pegged** — more expensive-to-serve requests cost more (a heavy `compute` call > a cached `signal` lookup). **Lead with this in demo/README** — it's the most legible "the agent decides the price" story.
+- **Confidence-pegged** — raise signal price when Archer's rolling edge/confidence is strong.
+
+Inject the computed price into the `PAYMENT-REQUIRED` (HTTP 402) header. Log every price with a human-readable reason string.
+
+### 4.3 Scout — the buying agent (agentic 30%)
+Buyer on a daily USDC budget. Extends the starter's `agent.mts` `--limit` cap into **per-call cost-benefit logic**: given Archer's quoted 402 price and the signal's stated confidence (from the trace), decide whether to buy. Budget is config/state — **not** an ERC-4626 vault (cuttable scope). A visible **Scout declines a low-confidence signal** moment is half the demo (borrows the credibility move of publicly rejecting low-quality output).
+
+### 4.4 Verifiable reasoning trace (innovation baseline — keep simple)
+Each signal ships with the decision, a confidence score, the factors behind it, and a **SHA-256 hash of the canonicalized trace** in the response. The buyer can recompute the hash to confirm the reasoning is unaltered. **Do not** build the Merkle-root / decentralized-storage apparatus — the hash-you-can-check is enough to tell the "verifiable why" story. Optional onchain hash anchoring only if streaming + traction are already solid (day 11 upside).
+
+### 4.5 Pay-per-second streaming (THE HEADLINE — innovation 20%)
+There is **no native "approve a rate" primitive**; streaming is composed from **discrete per-tick EIP-3009 authorizations** that Gateway batches.
+- **Tick interval:** 1 second (matches the "per second" framing; sub-500ms Gateway verification fits inside the tick).
+- **Loop:** `startStream` opens a session and begins a per-second ticker on Scout's side. Each tick signs one EIP-3009 `TransferWithAuthorization` for that tick's price (e.g. ~$0.0001/sec for the live decision feed) against the `GatewayWalletBatched` domain, reusing the same `GatewayClient.pay()` path as discrete endpoints. Archer verifies instantly and releases that tick's slice of the live decision feed.
+- **Gateway validity window:** Circle Gateway rejects short authorization windows (`authorization_validity_too_short`); current working starter uses `maxTimeoutSeconds = 604900` (7 days plus buffer). The stream's 1-second cadence is therefore **how often Scout signs a fresh authorization**, not a 1-second authorization expiry. Early streaming spike: confirm Gateway accepts many overlapping, long-validity, per-tick authorizations from the same buyer in rapid succession.
+- **Tap-to-stop:** Stopping clears the ticker — no further authorization is signed, Archer sees no valid auth for the interval, session closes. **Invariant: the buyer pays for exactly the ticks consumed, never more.**
+- **Settlement decoupling:** Instant verification (sub-500ms) is decoupled from batched onchain settlement; the stream feels live even though settlement lags. Surface **authorized/verified** volume in the UI, not settled volume.
+
+### 4.6 Agent-to-agent loop (vehicle, not headline)
+One Archer instance sells; one Scout instance buys on a budget; both settle sub-cent on Arc with no human in the loop. Makes the demo write itself: two agents settling a fraction of a cent in <0.5s.
+
+### 4.7 Live dashboard
+Real-time view of money moving. Counters proven to resonate in this ecosystem: **total payments, total volume (USDC), distinct paying clients, average transaction size (target sub-cent).** Plus the live streaming meter (cumulative authorized total ticking up, rate readout, session duration). Powered by Supabase real-time subscriptions over a `stream_events` / payments table.
+
+---
+
+## 5. Technical Architecture
+
+- **Starter:** `circlefin/arc-nanopayments` (clone → reinit own git → push to own `quiver` repo; keep attribution in README). Check Lepton submission rules for any "must fork official starter" requirement before wiping git history.
+- **Stack:** TypeScript throughout. **Node 22 + npm** (not Bun). **Next.js App Router** = frontend (dashboard) + backend (x402 route handlers / Gateway calls) in one app. Buyer agent is a standalone script (`agent.mts`).
+- **Database:** **Cloud/remote Supabase** (Postgres + real-time). **No Docker / no local Supabase** — the cloud project serves both local dev and the Vercel deploy. Supabase real-time is **load-bearing** for the streaming meter (same channel as the payments dashboard) — do not hand-roll websockets.
+- **Payments:** x402 protocol (HTTP 402 → `PAYMENT-REQUIRED` → signed retry → 200 + `PAYMENT-RESPONSE`). Circle Gateway batched settlement via EIP-3009 `TransferWithAuthorization` against `GatewayWalletBatched`; `GatewayClient.pay()` wraps the buyer-side loop. Settlement on **Arc testnet**; buyer wallet funded from the **Circle faucet**.
+- **Tooling:** ARC CLI (Canteen-hosted Arc RPC + context) and Circle CLI installed and authenticated. `npm run generate-wallets` for test wallets.
+- **Deploy:** **Vercel** + cloud Supabase. A deployed, payable URL is required for traction and judging.
+- **Agent reasoning:** Plain TypeScript decision functions (thin, legible — scores higher than a heavyweight framework doing simple math). The starter's LangChain.js buyer can be extended *only if* LLM-driven endpoint selection is wanted later; no separate agent SDK.
+
+**Reuse Archer's strategy core in TS** — port the signal-generating logic; it need not be a full agent port.
+
+---
+
+## 6. Build Plan (14 days)
+
+| Days | Milestone |
+|------|-----------|
+| **0–1 (Jun 15–16)** | Logistics: Luma register (passphrase `SITEx2224`), join Canteen + Arc Discords ("Canteen + Lepton"), install ARC + Circle CLIs. Get **unmodified** starter running on Node 22 + npm against cloud Supabase. `generate-wallets`, fund buyer from faucet, confirm stock `/api/premium/quote` does 402→200 with one settled testnet payment. **No custom code until this green-lights.** |
+| **2–3 (Jun 17–18)** | Reskin seller endpoints to Archer's signals. Port strategy core to TS. **Deploy to Vercel + wire cloud Supabase. Submit v0 immediately** — a deployed payable URL is the critical milestone; everything after is score-raising. |
+| **4–6 (Jun 19–21)** | Dynamic pricing (compute-pegged + confidence). Reasoning-trace-as-product (hashed, verifiable). Scout buyer with per-call cost-benefit logic reading the trace. Submit updated v0 ~day 5. |
+| **7–10 (Jun 22–25)** | **Streaming layer** (widest window — highest variance). Day 7: one stream paying real per-second ticks, landing in DB. Day 8: dashboard meter + tap-to-stop with visible exact-cost invariant. Days 9–10: harden edges (failed tick, out-of-balance, clean close) — this is the **adversarial-robustness** story, pull it into the demo. **Traction push in parallel all four days** — onboard community as paying users; track payers / payments / volume / avg size. |
+| **11–12 (Jun 26–27)** | Wire the two-sided Archer↔Scout loop. Dashboard polish (live money-flow + streaming meter). *Optional upside only if solid:* onchain hash anchoring, ERC-8004 bonded seller, or small budget vault. |
+| **13–14 (Jun 28–29)** | <3-min demo video (two agents settling a fraction of a cent in <0.5s; the per-second stream tap-to-stop). README for an unattended judge. Fill traction numbers honestly. Final submission before Jun 29 deadline. |
+
+**Sequencing principle:** front-load a deployed payable URL (day 3); treat streaming as the widest-window risk so a slip threatens *a better submission*, never *having a submission*. Streaming and traction are independent workstreams — a bad day on one never blocks the other.
+
+---
+
+## 7. Brand
+
+- **Names:** Project/dashboard **Quiver** · seller agent **Archer** · buyer agent **Scout**. (Arrows = signals; Scout "scouts" for worthwhile ones; Quiver is where they live. Keep this metaphor consistent across code, endpoints, README, and video — cheap now, costly to retrofit.)
+- **Palette — "Struck Coin":** Ink Black `#0B0B0D` (bg) · Struck Gold `#D4AF37` (core) · Pale Gold `#E8C766` (highlight) · Bronze Shadow `#7A5C1E` (depth) · Bone `#EDE6D6` (text) · Signal Green `#3FB950` (**only** for live/verified states — payment verified, tick landing).
+- **Logo:** Abstract geometric mark, implied arrow in negative space, flat gold on black (institutional register). SVG locked; store at `public/logo.svg` + square favicon. Typeset the wordmark in the real site font for crispness rather than relying on the generated lettering.
+
+---
+
+## 8. Success Metrics
+
+- **Must-have (existence):** Deployed payable URL with one settled testnet payment (day 3).
+- **Core:** Working discrete x402 endpoints; dynamic pricing with logged reasons; Scout making real buy/decline decisions; **working per-second stream with the never-over-charge invariant demonstrable.**
+- **Traction (30% — report honestly):** distinct paying clients, total payments, total USDC volume, avg transaction size (sub-cent). Target: beat the ~19-payer / sub-dollar prior-comparable bar.
+- **Demo:** <3-min video leading with the stream and the two-agent settlement; README a judge can follow unattended.
+
+---
+
+## 9. Risks & Mitigations
+
+- **Streaming is the headline *and* the hardest part** (no native primitive). → Protect day 7 start / day 8 meter fiercely; it's de-risked by the grounded per-tick design, but it's build-not-port.
+- **Every non-streaming element has prior-cohort precedent.** → Precedent = viable, not taken. Win on execution, the streaming anchor, and traction; lead the pitch with streaming.
+- **Scope creep** (vault, Merkle/Irys, bonded seller, cross-chain). → All explicitly optional/late (day 11+). First things cut under pressure.
+- **Traction underperforms.** → Onboard community early and in parallel; set honest expectations (tens of payers).
+- **DRY_RUN safety.** → Trading strategy and payment layer get **independent kill switches**; a live-payments demo must never imply live trading.
+- **Compliance posture.** → Public data only; signal-sharing framed as educational, not investment advice.
