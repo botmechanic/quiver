@@ -1,6 +1,7 @@
 # Quiver — Product Requirements Document
 
-> **Status:** Draft v1 · Lepton Agents Hackathon (Canteen × Circle) · June 15–29, 2026
+> **Status:** Draft v1 · Lepton Agents Hackathon (Canteen × Circle) · June 15–29, 2026  
+> **Implementation (Jun 17):** v0 deployed · dynamic pricing · Scout buy/decline · `/try` demo path shipped · streaming not started
 > **One-liner:** Two AI agents that earn and spend real money — fractions of a cent at a time — over x402 on Arc, with the headline feature being **true pay-per-second streaming**.
 
 ---
@@ -42,7 +43,7 @@ The prior Agora cohort results (published June 16, 2026) revealed three winning 
 
 - **Archer (seller agent)** — produces trading-signal hunches, sells them over x402, prices itself dynamically, and ships a verifiable reasoning trace with each signal.
 - **Scout (buyer agent)** — operates on a daily budget; reads each signal's reasoning and decides, per call, whether it is worth the quoted price.
-- **Human consumers** — hackathon peers and the builder's existing community (ATC / Skool members), onboarded as real paying users of Archer's endpoints during the window. **This audience is the core traction advantage** — the prior comparable converted only ~19 payers / $0.18 settled, so tens of payers and sub-dollar volume is a beatable, realistic bar.
+- **Human consumers** — hackathon peers and the builder's existing community (ATC / Skool members). **Hybrid traction path (shipped):** `/try` triggers a **demo-funded** real settlement (no wallet required), clearly labeled and recorded separately from distinct payers. Option B (visitor pays with own wallet) is a stretch only if streaming lands with time to spare.
 - **Judges** — evaluate via a deployed link, README, and a <3-minute demo video without the builder present.
 
 ---
@@ -57,17 +58,31 @@ x402-protected endpoints that sell Archer's output per call, settling sub-cent o
 
 Each endpoint returns the result **plus a verifiable reasoning trace** (see 4.4). Maps onto the starter's `/api/premium/quote | dataset | compute` routes, reskinned.
 
-### 4.2 Dynamic pricing (agentic 30%)
+### 4.2 Dynamic pricing (agentic 30%) — **shipped**
 Archer sets price per request as a genuine decision, on two axes:
 - **Compute-pegged** — more expensive-to-serve requests cost more (a heavy `compute` call > a cached `signal` lookup). **Lead with this in demo/README** — it's the most legible "the agent decides the price" story.
 - **Confidence-pegged** — raise signal price when Archer's rolling edge/confidence is strong.
 
-Inject the computed price into the `PAYMENT-REQUIRED` (HTTP 402) header. Log every price with a human-readable reason string.
+Inject the computed price into the `PAYMENT-REQUIRED` (HTTP 402) header. Log every price with a human-readable reason string (`lib/archer/pricing.ts`). Expose `price_reason` and `confidence` in `extensions.quiver` on the 402 payload.
 
-### 4.3 Scout — the buying agent (agentic 30%)
+### 4.3 Scout — the buying agent (agentic 30%) — **shipped**
 Buyer on a daily USDC budget. Extends the starter's `agent.mts` `--limit` cap into **per-call cost-benefit logic**: given Archer's quoted 402 price and the signal's stated confidence (from the trace), decide whether to buy. Budget is config/state — **not** an ERC-4626 vault (cuttable scope). A visible **Scout declines a low-confidence signal** moment is half the demo (borrows the credibility move of publicly rejecting low-quality output).
 
+**Decision rule (shipped):** buy when confidence ≥ 0.45 and price ≤ confidence × remaining funder budget; else decline with logged reason (`lib/scout/decision.ts`).
+
 **Budget model:** the starter uses a persistent funded **funder wallet** that seeds fresh ephemeral payer wallets for each agent run. Scout's daily budget should live at the funder/treasury level (cumulative draws from the funder), while ephemeral wallets are disposable execution accounts for paying individual sessions.
+
+### 4.3.1 Human demo path — Try Quiver (traction 30%) — **shipped**
+
+Visitors at **`/try`** cannot sign EIP-3009 authorizations. The demo path is **honestly labeled**:
+
+- **`POST /api/demo/buy`** runs funder → ephemeral → Gateway → Archer server-side (same flow as Scout).
+- Produces a **real** x402 settlement visible on the dashboard.
+- Recorded as `payment_events.raw.source = 'demo'` — **not** a distinct paying visitor.
+- Rate-limited per IP (`DEMO_RATE_LIMIT_SECONDS`, default 30s) — mandatory; public button spends real testnet USDC from the funder.
+- **Traction reporting:** "N demo buys" and "M Scout payments" are separate, defensible metrics.
+
+**Out of scope for this block:** wallet-connect / visitor-funded payments (Option B) — stretch only after streaming if time allows.
 
 ### 4.4 Verifiable reasoning trace (innovation baseline — keep simple)
 Each signal ships with the decision, a confidence score, the factors behind it, and a **SHA-256 hash of the canonicalized trace** in the response. The buyer can recompute the hash to confirm the reasoning is unaltered. **Do not** build the Merkle-root / decentralized-storage apparatus — the hash-you-can-check is enough to tell the "verifiable why" story. Optional onchain hash anchoring only if streaming + traction are already solid (day 11 upside).
@@ -84,8 +99,10 @@ There is **no native "approve a rate" primitive**; streaming is composed from **
 ### 4.6 Agent-to-agent loop (vehicle, not headline)
 One Archer instance sells; one Scout instance buys on a budget; both settle sub-cent on Arc with no human in the loop. Makes the demo write itself: two agents settling a fraction of a cent in <0.5s.
 
-### 4.7 Live dashboard
+### 4.7 Live dashboard — **partial (discrete payments shipped)**
 Real-time view of money moving. Counters proven to resonate in this ecosystem: **total payments, total volume (USDC), distinct paying clients, average transaction size (target sub-cent).** Plus the live streaming meter (cumulative authorized total ticking up, rate readout, session duration). Powered by Supabase real-time subscriptions over a `stream_events` / payments table.
+
+**Shipped:** payments table with realtime inserts; **demo vs Scout split** in dashboard metrics (`payment_events.raw.source`); source badges per row. **Not shipped:** streaming meter.
 
 ---
 
@@ -96,7 +113,7 @@ Real-time view of money moving. Counters proven to resonate in this ecosystem: *
 - **Database:** **Cloud/remote Supabase** (Postgres + real-time). **No Docker / no local Supabase** — the cloud project serves both local dev and the Vercel deploy. Supabase real-time is **load-bearing** for the streaming meter (same channel as the payments dashboard) — do not hand-roll websockets.
 - **Payments:** x402 protocol (HTTP 402 → `PAYMENT-REQUIRED` → signed retry → 200 + `PAYMENT-RESPONSE`). Circle Gateway batched settlement via EIP-3009 `TransferWithAuthorization` against `GatewayWalletBatched`; `GatewayClient.pay()` wraps the buyer-side loop. Settlement on **Arc testnet**; buyer wallet funded from the **Circle faucet**.
 - **Tooling:** ARC CLI (Canteen-hosted Arc RPC + context) and Circle CLI installed and authenticated. `npm run generate-wallets` for test wallets.
-- **Deploy:** **Vercel** + cloud Supabase. A deployed, payable URL is required for traction and judging.
+- **Deploy:** **Vercel** + cloud Supabase. Production: [quiver-self.vercel.app](https://quiver-self.vercel.app). Public demo: [quiver-self.vercel.app/try](https://quiver-self.vercel.app/try). `BASE_URL` in Vercel must match the stable production domain. `BUYER_PRIVATE_KEY` required in Vercel for server-side demo buys.
 - **Agent reasoning:** Plain TypeScript decision functions (thin, legible — scores higher than a heavyweight framework doing simple math). The starter's LangChain.js buyer can be extended *only if* LLM-driven endpoint selection is wanted later; no separate agent SDK.
 
 **Reuse Archer's strategy core in TS** — port the signal-generating logic; it need not be a full agent port.
@@ -109,8 +126,8 @@ Real-time view of money moving. Counters proven to resonate in this ecosystem: *
 |------|-----------|
 | **0–1 (Jun 15–16)** | Logistics: Luma register (passphrase `SITEx2224`), join Canteen + Arc Discords ("Canteen + Lepton"), install ARC + Circle CLIs. Get **unmodified** starter running on Node 22 + npm against cloud Supabase. `generate-wallets`, fund buyer from faucet, confirm stock `/api/premium/quote` does 402→200 with one settled testnet payment. **No custom code until this green-lights.** |
 | **2–3 (Jun 17–18)** | Reskin seller endpoints to Archer's signals. Port strategy core to TS. **Deploy to Vercel + wire cloud Supabase. Submit v0 immediately** — a deployed payable URL is the critical milestone; everything after is score-raising. |
-| **4–6 (Jun 19–21)** | Dynamic pricing (compute-pegged + confidence). Reasoning-trace-as-product (hashed, verifiable). Scout buyer with per-call cost-benefit logic reading the trace. Submit updated v0 ~day 5. |
-| **7–10 (Jun 22–25)** | **Streaming layer** (widest window — highest variance). Day 7: one stream paying real per-second ticks, landing in DB. Day 8: dashboard meter + tap-to-stop with visible exact-cost invariant. Days 9–10: harden edges (failed tick, out-of-balance, clean close) — this is the **adversarial-robustness** story, pull it into the demo. **Traction push in parallel all four days** — onboard community as paying users; track payers / payments / volume / avg size. |
+| **4–6 (Jun 19–21)** | ~~Dynamic pricing~~ · ~~Scout buy/decline~~ · ~~`/try` demo path~~ · **done (Jun 17)**. Submit updated v0. Traction: share `/try` link in Discord + community. |
+| **7–10 (Jun 22–25)** | **Streaming layer** (widest window — highest variance). Day 7: one stream paying real per-second ticks, landing in DB. Day 8: dashboard meter + tap-to-stop with visible exact-cost invariant. Days 9–10: harden edges (failed tick, out-of-balance, clean close) — this is the **adversarial-robustness** story, pull it into the demo. **Traction push in parallel** — demo buys accumulate via `/try`; track demo vs Scout separately. |
 | **11–12 (Jun 26–27)** | Wire the two-sided Archer↔Scout loop. Dashboard polish (live money-flow + streaming meter). *Optional upside only if solid:* onchain hash anchoring, ERC-8004 bonded seller, or small budget vault. |
 | **13–14 (Jun 28–29)** | <3-min demo video (two agents settling a fraction of a cent in <0.5s; the per-second stream tap-to-stop). README for an unattended judge. Fill traction numbers honestly. Final submission before Jun 29 deadline. |
 
@@ -128,9 +145,9 @@ Real-time view of money moving. Counters proven to resonate in this ecosystem: *
 
 ## 8. Success Metrics
 
-- **Must-have (existence):** Deployed payable URL with one settled testnet payment (day 3).
-- **Core:** Working discrete x402 endpoints; dynamic pricing with logged reasons; Scout making real buy/decline decisions; **working per-second stream with the never-over-charge invariant demonstrable.**
-- **Traction (30% — report honestly):** distinct paying clients, total payments, total USDC volume, avg transaction size (sub-cent). Target: beat the ~19-payer / sub-dollar prior-comparable bar.
+- **Must-have (existence):** Deployed payable URL with one settled testnet payment (day 3). **Met.**
+- **Core (partial):** ~~Working discrete x402 endpoints~~ · ~~dynamic pricing with logged reasons~~ · ~~Scout buy/decline~~ · ~~demo path (`/try`)~~ · **working per-second stream** (not started).
+- **Traction (30% — report honestly):** Report **demo buys** and **Scout payments** separately. Distinct paying clients = Scout payer addresses only. Target: beat ~19-payer / sub-dollar prior-comparable bar for real funded payers; demo buys are engagement, not distinct payers.
 - **Demo:** <3-min video leading with the stream and the two-agent settlement; README a judge can follow unattended.
 
 ---
@@ -140,6 +157,7 @@ Real-time view of money moving. Counters proven to resonate in this ecosystem: *
 - **Streaming is the headline *and* the hardest part** (no native primitive). → Protect day 7 start / day 8 meter fiercely; it's de-risked by the grounded per-tick design, but it's build-not-port.
 - **Every non-streaming element has prior-cohort precedent.** → Precedent = viable, not taken. Win on execution, the streaming anchor, and traction; lead the pitch with streaming.
 - **Scope creep** (vault, Merkle/Irys, bonded seller, cross-chain). → All explicitly optional/late (day 11+). First things cut under pressure.
-- **Traction underperforms.** → Onboard community early and in parallel; set honest expectations (tens of payers).
+- **Traction underperforms.** → `/try` link live; demo buys bank honestly. Share in Discord + ATC/Skool immediately after deploy verification.
+- **Demo funder drain.** → Per-IP rate limit (30s default); refaucet funder if needed; know IP rotation is the exposed edge.
 - **DRY_RUN safety.** → Trading strategy and payment layer get **independent kill switches**; a live-payments demo must never imply live trading.
 - **Compliance posture.** → Public data only; signal-sharing framed as educational, not investment advice.
