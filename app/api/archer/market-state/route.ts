@@ -1,16 +1,29 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createTraceEnvelope, generateArcherTrace } from "@/lib/archer/strategy";
+import { logPriceQuote, quoteMarketState } from "@/lib/archer/pricing";
+import {
+  createTraceEnvelope,
+  generateArcherTrace,
+  type ArcherTrace,
+} from "@/lib/archer/strategy";
 import { withGateway } from "@/lib/x402";
 
-const handler = async (_req: NextRequest) => {
-  const trace = generateArcherTrace("ARC-USDC");
+interface MarketStateContext {
+  trace: ArcherTrace;
+  quote: ReturnType<typeof quoteMarketState>;
+}
+
+const handler = async (_req: NextRequest, ctx: MarketStateContext) => {
+  const { trace, quote } = ctx;
   const momentum = trace.factors.find((factor) => factor.name === "momentum");
   const liquidity = trace.factors.find((factor) => factor.name === "liquidity");
-  const volatility = trace.factors.find((factor) => factor.name === "volatility");
+  const volatility = trace.factors.find(
+    (factor) => factor.name === "volatility",
+  );
 
   return NextResponse.json({
     endpoint: "market-state",
-    price_usdc: "0.0001",
+    price_usdc: quote.priceUsdc,
+    price_reason: quote.reason,
     market_state: {
       symbol: trace.symbol,
       momentum: momentum?.value,
@@ -25,6 +38,11 @@ const handler = async (_req: NextRequest) => {
 
 export const GET = withGateway(
   handler,
-  "$0.0001",
+  async () => {
+    const trace = generateArcherTrace("ARC-USDC");
+    const quote = quoteMarketState(trace);
+    logPriceQuote(quote);
+    return { quote, ctx: { trace, quote } };
+  },
   "/api/archer/market-state",
 );

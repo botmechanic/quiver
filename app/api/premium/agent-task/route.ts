@@ -17,7 +17,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { withGateway } from "@/lib/x402";
+import { withStaticGateway } from "@/lib/x402";
 
 const clues = [
   "The treasure is hidden where the sun meets the ocean — latitude 34.0195° N.",
@@ -38,4 +38,8 @@ const handler = async (_req: NextRequest) => {
   });
 };
 
-export const GET = withGateway(handler, "$0.03", "/api/premium/agent-task");
+export const GET = withStaticGateway(
+  handler,
+  "$0.03",
+  "/api/premium/agent-task",
+);

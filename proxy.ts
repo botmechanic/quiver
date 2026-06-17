@@ -22,9 +22,14 @@ export function proxy(request: NextRequest) {
   const session = request.cookies.get("session")?.value;
   const { pathname } = request.nextUrl;
 
-  // Logged-in user trying to access sign-in page -> redirect to dashboard
+  // Logged-in user on home -> dashboard (Try Quiver lives at /try and on /dashboard)
   if (pathname === "/" && session === "authenticated") {
     return NextResponse.redirect(new URL("/dashboard", request.url));
+  }
+
+  // Public try page — always reachable (share this link for traction)
+  if (pathname === "/try") {
+    return NextResponse.next();
   }
 
   // Logged-out user trying to access protected routes -> redirect to sign-in
@@ -36,5 +41,5 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/", "/dashboard/:path*"],
+  matcher: ["/", "/try", "/dashboard/:path*"],
 };

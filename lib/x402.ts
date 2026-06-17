@@ -42,6 +42,14 @@ interface PaymentPayload {
   extensions?: Record<string, unknown>;
 }
 
+export interface GatewayQuote {
+  /** Dollar string for x402, e.g. "$0.0014" */
+  price: string;
+  reason: string;
+  priceUsdc?: string;
+  confidence?: number;
+}
+
 function buildPaymentRequirements(price: string) {
   // Parse dollar amount to USDC atomic units (6 decimals)
   const amount = Math.round(parseFloat(price.replace("$", "")) * 1_000_000);
@@ -64,35 +72,69 @@ function buildPaymentRequirements(price: string) {
   };
 }
 
+function buildPaymentRequired(
+  endpoint: string,
+  quote: GatewayQuote,
+  requirements: ReturnType<typeof buildPaymentRequirements>,
+) {
+  const priceLabel = quote.priceUsdc ?? quote.price.replace("$", "");
+  const description = quote.confidence
+    ? `Paid resource (${priceLabel} USDC) — confidence ${quote.confidence.toFixed(2)}`
+    : `Paid resource (${priceLabel} USDC)`;
+
+  const paymentRequired: Record<string, unknown> = {
+    x402Version: 2,
+    resource: {
+      url: endpoint,
+      description,
+      mimeType: "application/json",
+    },
+    accepts: [requirements],
+  };
+
+  if (quote.reason || quote.confidence !== undefined) {
+    paymentRequired.extensions = {
+      quiver: {
+        price_usdc: priceLabel,
+        price_reason: quote.reason,
+        ...(quote.confidence !== undefined
+          ? { confidence: quote.confidence }
+          : {}),
+      },
+    };
+  }
+
+  return paymentRequired;
+}
+
 /**
  * Wraps a Next.js route handler with Circle Gateway payment verification.
  *
- * Follows fred-mvp's approach: manually constructs payment requirements with
- * the Gateway batching `extra` field and calls BatchFacilitatorClient directly.
+ * `prepare` runs once per request to compute the dynamic quote before the 402
+ * is issued (and again on the paid retry so verify/settle match the quote).
  */
-export function withGateway(
-  handler: (req: NextRequest) => Promise<NextResponse>,
-  price: string,
+export function withGateway<TContext = void>(
+  handler: (req: NextRequest, ctx: TContext) => Promise<NextResponse>,
+  prepare: (
+    req: NextRequest,
+  ) => Promise<{ quote: GatewayQuote; ctx: TContext }>,
   endpoint: string,
 ) {
-  const requirements = buildPaymentRequirements(price);
-
   return async (req: NextRequest) => {
+    const { quote, ctx } = await prepare(req);
+    const requirements = buildPaymentRequirements(quote.price);
+
+    if (quote.reason) {
+      console.log(`[x402] Quote: ${quote.reason}`);
+    }
+
     const paymentSignature = req.headers.get("payment-signature");
 
     // No payment — return 402 with Gateway batching payment requirements
     if (!paymentSignature) {
-      console.log(`[x402] 402 Payment Required: ${endpoint}`);
+      console.log(`[x402] 402 Payment Required: ${endpoint} @ ${quote.price}`);
 
-      const paymentRequired = {
-        x402Version: 2,
-        resource: {
-          url: endpoint,
-          description: `Paid resource (${price} USDC)`,
-          mimeType: "application/json",
-        },
-        accepts: [requirements],
-      };
+      const paymentRequired = buildPaymentRequired(endpoint, quote, requirements);
 
       return new NextResponse(JSON.stringify({}), {
         status: 402,
@@ -145,10 +187,10 @@ export function withGateway(
       }
 
       // Record payment event in Supabase
-      const amountUsdc = (
-        Number(requirements.amount) / 1e6
-      ).toString();
+      const amountUsdc = (Number(requirements.amount) / 1e6).toString();
       const payer = settleResult.payer ?? verifyResult.payer ?? "unknown";
+      const paymentSource =
+        req.headers.get("x-quiver-payment-source") === "demo" ? "demo" : "scout";
 
       const { error } = await supabase.from("payment_events").insert({
         endpoint,
@@ -156,7 +198,13 @@ export function withGateway(
         amount_usdc: amountUsdc,
         network: requirements.network,
         gateway_tx: settleResult.transaction ?? null,
-        raw: { requirements, settleResult },
+        raw: {
+          requirements,
+          settleResult,
+          quoted_price_usdc: quote.priceUsdc ?? amountUsdc,
+          price_reason: quote.reason,
+          source: paymentSource,
+        },
       });
 
       if (error) {
@@ -168,7 +216,7 @@ export function withGateway(
       );
 
       // Call the actual route handler
-      const response = await handler(req);
+      const response = await handler(req, ctx);
 
       // Forward settlement info to the client
       const settleResponseHeader = Buffer.from(
@@ -192,4 +240,24 @@ export function withGateway(
       );
     }
   };
+}
+
+/** Backward-compatible wrapper for routes with a fixed price. */
+export function withStaticGateway(
+  handler: (req: NextRequest) => Promise<NextResponse>,
+  price: string,
+  endpoint: string,
+) {
+  return withGateway(
+    (req) => handler(req),
+    async () => ({
+      quote: {
+        price,
+        reason: `static ${price.replace("$", "")} USDC`,
+        priceUsdc: price.replace("$", ""),
+      },
+      ctx: undefined as void,
+    }),
+    endpoint,
+  );
 }

@@ -54,6 +54,9 @@ import {
 import { shortenHash } from "@/lib/utils";
 import { usePaymentEvents } from "@/hooks/use-transactions";
 import { useWithdrawals } from "@/hooks/use-withdrawals";
+import { PaymentMetrics } from "@/components/dashboard/payment-metrics";
+import { TryQuiverPanel } from "@/components/try-quiver-panel";
+import { getPaymentSource } from "@/lib/payments";
 
 type SortDirection = "default" | "asc" | "desc";
 type SortField = "amount" | "date";
@@ -247,6 +250,12 @@ export default function Dashboard() {
         </p>
       </div>
 
+      <PaymentMetrics events={events} />
+
+      <div className="mb-8">
+        <TryQuiverPanel />
+      </div>
+
       <div className="flex items-center gap-3 mb-4">
         <Input
           placeholder={
@@ -301,6 +310,7 @@ export default function Dashboard() {
                   <TableHead>Transaction</TableHead>
                   <TableHead>Payer</TableHead>
                   <TableHead>Endpoint</TableHead>
+                  <TableHead>Source</TableHead>
                   <TableHead className="text-right">
                     <button
                       className="inline-flex items-center gap-1 hover:text-foreground transition-colors ml-auto"
@@ -327,7 +337,7 @@ export default function Dashboard() {
                 {loadingPayments ? (
                   <TableRow>
                     <TableCell
-                      colSpan={5}
+                      colSpan={6}
                       className="h-24 text-center text-muted-foreground"
                     >
                       <Loader2 size={16} className="animate-spin inline mr-2" />
@@ -337,7 +347,7 @@ export default function Dashboard() {
                 ) : paginatedPayments.length === 0 ? (
                   <TableRow>
                     <TableCell
-                      colSpan={5}
+                      colSpan={6}
                       className="h-24 text-center text-muted-foreground"
                     >
                       No payments found.
@@ -372,6 +382,22 @@ export default function Dashboard() {
                         <code className="bg-muted px-1.5 py-0.5 rounded text-xs">
                           {ev.endpoint}
                         </code>
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant={
+                            getPaymentSource(ev) === "demo"
+                              ? "outline"
+                              : "secondary"
+                          }
+                          className={
+                            getPaymentSource(ev) === "demo"
+                              ? "border-[#D4AF37] text-[#7A5C1E]"
+                              : undefined
+                          }
+                        >
+                          {getPaymentSource(ev)}
+                        </Badge>
                       </TableCell>
                       <TableCell className="text-right font-mono">
                         ${ev.amount_usdc}

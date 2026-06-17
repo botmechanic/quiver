@@ -10,6 +10,12 @@ import {
 import { arcTestnet } from "viem/chains";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import * as readline from "node:readline/promises";
+import {
+  evaluatePurchase,
+  formatScoutDecision,
+  SCOUT_CONFIDENCE_THRESHOLD,
+} from "./lib/scout/decision.ts";
+import { fetchArcherQuote } from "./lib/scout/quote.ts";
 
 // --- Parse CLI args ---
 function parseArgs() {
@@ -33,11 +39,20 @@ function parseArgs() {
 
 let { spendingLimit } = parseArgs();
 let totalSpent = 0;
+let totalDeclined = 0;
 let paused = false;
+
+function remainingBudget(): number {
+  if (spendingLimit === null) return Number.POSITIVE_INFINITY;
+  return Math.max(0, spendingLimit - totalSpent);
+}
 
 if (spendingLimit !== null) {
   console.log(`Spending limit: ${spendingLimit} USDC`);
 }
+console.log(
+  `Scout rule: buy when confidence ≥ ${SCOUT_CONFIDENCE_THRESHOLD.toFixed(2)} and price ≤ confidence × remaining budget`,
+);
 
 async function promptForAllowance(): Promise<number> {
   const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
@@ -262,34 +277,66 @@ function startPaymentLoop() {
     index++;
     inFlight++;
 
-    const start = Date.now();
-    gateway
-      .pay(ep.url, { method: ep.method, body: ep.body })
-      .then((result) => {
-        inFlight--;
-        const ms = Date.now() - start;
-        const amount = parseFloat(result.formattedAmount);
-        totalSpent += amount;
-
-        const limitInfo = spendingLimit !== null
-          ? ` [spent: ${totalSpent.toFixed(6)}/${spendingLimit.toFixed(6)} USDC]`
-          : "";
-        console.log(
-          `#${index} ${ep.method} ${ep.url.split("/").pop()} -> ${result.formattedAmount} USDC (${ms}ms) [in-flight: ${inFlight}]${limitInfo}`,
-        );
-
-        if (spendingLimit !== null && totalSpent >= spendingLimit) {
-          handleLimitReached();
-        }
-      })
-      .catch((err) => {
-        inFlight--;
-        const ms = Date.now() - start;
-        console.error(
-          `#${index} ${ep.url.split("/").pop()} FAILED (${ms}ms): ${err.message} [in-flight: ${inFlight}]`,
-        );
-      });
+    void handleEndpoint(ep, index);
   }, 1000);
+}
+
+async function handleEndpoint(
+  ep: (typeof endpoints)[number],
+  callIndex: number,
+) {
+  const path = new URL(ep.url).pathname;
+  const start = Date.now();
+
+  try {
+    const quote = await fetchArcherQuote(ep.url, {
+      method: ep.method,
+      body: ep.body,
+    });
+    const decision = evaluatePurchase({
+      endpoint: path,
+      priceUsdc: quote.priceUsdc,
+      confidence: quote.confidence,
+      remainingBudget: remainingBudget(),
+    });
+
+    if (decision.action === "decline") {
+      totalDeclined++;
+      const ms = Date.now() - start;
+      console.log(
+        `#${callIndex} ${formatScoutDecision(path, decision)} (${ms}ms) [declined: ${totalDeclined}]`,
+      );
+      return;
+    }
+
+    const result = await gateway.pay(ep.url, {
+      method: ep.method,
+      body: ep.body,
+      headers: { "x-quiver-payment-source": "scout" },
+    });
+    const ms = Date.now() - start;
+    const amount = parseFloat(result.formattedAmount);
+    totalSpent += amount;
+
+    const limitInfo =
+      spendingLimit !== null
+        ? ` [spent: ${totalSpent.toFixed(6)}/${spendingLimit.toFixed(6)} USDC]`
+        : "";
+    console.log(
+      `#${callIndex} ${formatScoutDecision(path, decision)} -> ${result.formattedAmount} USDC (${ms}ms) [in-flight: ${inFlight - 1}]${limitInfo}`,
+    );
+
+    if (spendingLimit !== null && totalSpent >= spendingLimit) {
+      handleLimitReached();
+    }
+  } catch (err) {
+    const ms = Date.now() - start;
+    console.error(
+      `#${callIndex} ${path.split("/").pop()} FAILED (${ms}ms): ${(err as Error).message} [in-flight: ${inFlight - 1}]`,
+    );
+  } finally {
+    inFlight--;
+  }
 }
 
 startPaymentLoop();

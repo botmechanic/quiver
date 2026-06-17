@@ -1,13 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createTraceEnvelope, generateArcherTrace } from "@/lib/archer/strategy";
+import { logPriceQuote, quoteSignal } from "@/lib/archer/pricing";
+import {
+  createTraceEnvelope,
+  generateArcherTrace,
+  type ArcherTrace,
+} from "@/lib/archer/strategy";
 import { withGateway } from "@/lib/x402";
 
-const handler = async (_req: NextRequest) => {
-  const trace = generateArcherTrace("ARC-USDC");
+interface SignalContext {
+  trace: ArcherTrace;
+  quote: ReturnType<typeof quoteSignal>;
+}
+
+const handler = async (_req: NextRequest, ctx: SignalContext) => {
+  const { trace, quote } = ctx;
 
   return NextResponse.json({
     endpoint: "signal",
-    price_usdc: "0.001",
+    price_usdc: quote.priceUsdc,
+    price_reason: quote.reason,
     signal: {
       symbol: trace.symbol,
       decision: trace.decision,
@@ -17,4 +28,13 @@ const handler = async (_req: NextRequest) => {
   });
 };
 
-export const GET = withGateway(handler, "$0.001", "/api/archer/signal");
+export const GET = withGateway(
+  handler,
+  async () => {
+    const trace = generateArcherTrace("ARC-USDC");
+    const quote = quoteSignal(trace);
+    logPriceQuote(quote);
+    return { quote, ctx: { trace, quote } };
+  },
+  "/api/archer/signal",
+);

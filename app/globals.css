@@ -84,4 +84,10 @@
   body {
     @apply bg-background text-foreground;
   }
+
+  /* Quiver public pages use Struck Coin palette on the page shell */
+  .quiver-public {
+    background-color: #0b0b0d;
+    color: #ede6d6;
+  }
 }
