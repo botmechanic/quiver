@@ -16,6 +16,7 @@ import {
   SCOUT_CONFIDENCE_THRESHOLD,
 } from "./lib/scout/decision.ts";
 import { fetchArcherQuote } from "./lib/scout/quote.ts";
+import { normalizeBaseUrl } from "./lib/utils.ts";
 
 // --- Parse CLI args ---
 function parseArgs() {
@@ -87,7 +88,7 @@ if (!funderKey) {
 const ARC_TESTNET_USDC = "0x3600000000000000000000000000000000000000" as const;
 const ARC_TESTNET_RPC = "https://rpc.testnet.arc.network";
 
-const BASE_URL = process.env.BASE_URL ?? "http://localhost:3000";
+const BASE_URL = normalizeBaseUrl(process.env.BASE_URL ?? "http://localhost:3000");
 const DEPOSIT_AMOUNT = process.env.DEPOSIT_AMOUNT ?? "1";
 // Amount of native USDC to send for gas (Arc testnet gas = USDC with 18 decimals)
 const GAS_FUND_AMOUNT = parseEther("0.01");

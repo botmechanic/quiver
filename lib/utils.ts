@@ -27,3 +27,13 @@ export function shortenHash(hash: string, chars = 4): string {
   if (hash.length <= chars * 2 + 2) return hash;
   return `${hash.slice(0, chars + 2)}...${hash.slice(-chars)}`;
 }
+
+/** Ensure BASE_URL is a valid absolute URL (adds https:// if missing). */
+export function normalizeBaseUrl(url: string): string {
+  const trimmed = url.trim().replace(/\/$/, "");
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  if (trimmed.startsWith("localhost") || trimmed.startsWith("127.0.0.1")) {
+    return `http://${trimmed}`;
+  }
+  return `https://${trimmed}`;
+}

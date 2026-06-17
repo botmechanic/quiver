@@ -16,6 +16,7 @@ import {
   privateKeyToAccount,
   type PrivateKeyAccount,
 } from "viem/accounts";
+import { normalizeBaseUrl } from "@/lib/utils";
 
 export const PAYMENT_SOURCE_HEADER = "x-quiver-payment-source";
 
@@ -207,7 +208,9 @@ async function ensureGatewayBalance(session: DemoSession) {
 }
 
 export function resolveBaseUrl(request: Request): string {
-  if (process.env.BASE_URL) return process.env.BASE_URL.replace(/\/$/, "");
+  if (process.env.BASE_URL) {
+    return normalizeBaseUrl(process.env.BASE_URL);
+  }
   const host = request.headers.get("x-forwarded-host") ?? request.headers.get("host");
   const proto = request.headers.get("x-forwarded-proto") ?? "http";
   if (host) return `${proto}://${host}`;
