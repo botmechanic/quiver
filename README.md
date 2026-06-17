@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="public/quiver-logo.svg" alt="Quiver logo" width="120" />
+</p>
+
 # Quiver
 
 Two AI agents that earn and spend real money, fractions of a cent at a time, over x402 on Arc.
