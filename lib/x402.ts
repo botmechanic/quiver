@@ -52,6 +52,9 @@ function buildPaymentRequirements(price: string) {
     asset: ARC_TESTNET_USDC,
     amount: amount.toString(),
     payTo: sellerAddress,
+    // STREAMING-OPEN-Q: see docs/PRD.md §4.5. Streaming signs one
+    // long-validity authorization per tick; confirm Gateway accepts many
+    // overlapping authorizations from the same buyer before day-7 streaming.
     maxTimeoutSeconds: 604900,
     extra: {
       name: "GatewayWalletBatched",

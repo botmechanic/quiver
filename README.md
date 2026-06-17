@@ -96,7 +96,7 @@ Circle Gateway batches many signed offchain authorizations into a single onchain
    The agent uses the buyer wallet to purchase resources from the x402-protected premium endpoints, paying with USDC on the Arc Testnet. If `OPENAI_API_KEY` is set, the agent uses the LLM to decide which tools to call; otherwise it falls back to a scripted mock run. You can optionally pass a custom query:
 
    ```bash
-   npm run agent -- "Buy me a quote at http://localhost:3000/api/premium/quote"
+   npm run agent -- "Buy me Archer's signal at http://localhost:3000/api/archer/signal"
    ```
 
    To set a USDC spending limit, use the `--limit` flag. The agent will pause when the limit is reached and prompt for additional allowance:
@@ -115,20 +115,21 @@ Circle Gateway batches many signed offchain authorizations into a single onchain
 - Payment events and withdrawals are persisted to Supabase with real-time subscriptions
 - Styled with [Tailwind CSS](https://tailwindcss.com) and components from [shadcn/ui](https://ui.shadcn.com/)
 
-## Paywalled Endpoints
+## Archer Paywalled Endpoints
 
-The seller exposes several x402-protected API routes at different price points:
+Archer exposes x402-protected API routes at different price points:
 
 | Endpoint | Method | Price (USDC) | Description |
 | --- | --- | --- | --- |
-| `/api/premium/quote` | GET | $0.001 | Returns a premium inspirational quote |
-| `/api/premium/dataset` | GET | $0.01 | Returns a small JSON analytics dataset |
-| `/api/premium/compute` | POST | $0.0003 | Performs text analysis on submitted content |
-| `/api/premium/agent-task` | GET | $0.03 | Returns a clue/step for a treasure hunt task |
+| `/api/archer/signal` | GET | $0.001 | Returns Archer's latest v0 strategy signal |
+| `/api/archer/market-state` | GET | $0.0001 | Returns Archer's current market-state snapshot |
+| `/api/archer/compute` | POST | $0.003 | Runs a deeper v0 Archer analysis over submitted context |
 
 Each endpoint returns `402 Payment Required` for unpaid requests. The buyer agent automatically signs the authorization and retries with the payment signature to receive the content.
 
 Circle Gateway batched payments require authorization validity long enough for settlement batching. The seller sets `maxTimeoutSeconds` to `604900` (7 days plus buffer) so buyer signatures are accepted by the Gateway verifier.
+
+Each Archer response includes a simple verifiable reasoning trace. Buyers can recompute `reasoning.trace_hash` by canonicalizing the returned `reasoning.trace` object with sorted keys and hashing that canonical string with SHA-256.
 
 ## Seller Dashboard
 

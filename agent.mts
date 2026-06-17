@@ -78,14 +78,13 @@ const DEPOSIT_AMOUNT = process.env.DEPOSIT_AMOUNT ?? "1";
 const GAS_FUND_AMOUNT = parseEther("0.01");
 
 const endpoints = [
-  { url: `${BASE_URL}/api/premium/quote`, method: "GET" as const },
-  { url: `${BASE_URL}/api/premium/dataset`, method: "GET" as const },
+  { url: `${BASE_URL}/api/archer/signal`, method: "GET" as const },
+  { url: `${BASE_URL}/api/archer/market-state`, method: "GET" as const },
   {
-    url: `${BASE_URL}/api/premium/compute`,
+    url: `${BASE_URL}/api/archer/compute`,
     method: "POST" as const,
-    body: { text: "Hello from the Arc nanopayments demo!" },
+    body: { prompt: "Scout requests Archer's deeper ARC-USDC read." },
   },
-  { url: `${BASE_URL}/api/premium/agent-task`, method: "GET" as const },
 ];
 
 // --- Generate ephemeral wallet ---
