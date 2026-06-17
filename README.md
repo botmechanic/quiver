@@ -128,6 +128,8 @@ The seller exposes several x402-protected API routes at different price points:
 
 Each endpoint returns `402 Payment Required` for unpaid requests. The buyer agent automatically signs the authorization and retries with the payment signature to receive the content.
 
+Circle Gateway batched payments require authorization validity long enough for settlement batching. The seller sets `maxTimeoutSeconds` to `604900` (7 days plus buffer) so buyer signatures are accepted by the Gateway verifier.
+
 ## Seller Dashboard
 
 The dashboard at `/dashboard` provides:
