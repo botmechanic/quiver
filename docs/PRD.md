@@ -67,6 +67,8 @@ Inject the computed price into the `PAYMENT-REQUIRED` (HTTP 402) header. Log eve
 ### 4.3 Scout — the buying agent (agentic 30%)
 Buyer on a daily USDC budget. Extends the starter's `agent.mts` `--limit` cap into **per-call cost-benefit logic**: given Archer's quoted 402 price and the signal's stated confidence (from the trace), decide whether to buy. Budget is config/state — **not** an ERC-4626 vault (cuttable scope). A visible **Scout declines a low-confidence signal** moment is half the demo (borrows the credibility move of publicly rejecting low-quality output).
 
+**Budget model:** the starter uses a persistent funded **funder wallet** that seeds fresh ephemeral payer wallets for each agent run. Scout's daily budget should live at the funder/treasury level (cumulative draws from the funder), while ephemeral wallets are disposable execution accounts for paying individual sessions.
+
 ### 4.4 Verifiable reasoning trace (innovation baseline — keep simple)
 Each signal ships with the decision, a confidence score, the factors behind it, and a **SHA-256 hash of the canonicalized trace** in the response. The buyer can recompute the hash to confirm the reasoning is unaltered. **Do not** build the Merkle-root / decentralized-storage apparatus — the hash-you-can-check is enough to tell the "verifiable why" story. Optional onchain hash anchoring only if streaming + traction are already solid (day 11 upside).
 
@@ -75,6 +77,7 @@ There is **no native "approve a rate" primitive**; streaming is composed from **
 - **Tick interval:** 1 second (matches the "per second" framing; sub-500ms Gateway verification fits inside the tick).
 - **Loop:** `startStream` opens a session and begins a per-second ticker on Scout's side. Each tick signs one EIP-3009 `TransferWithAuthorization` for that tick's price (e.g. ~$0.0001/sec for the live decision feed) against the `GatewayWalletBatched` domain, reusing the same `GatewayClient.pay()` path as discrete endpoints. Archer verifies instantly and releases that tick's slice of the live decision feed.
 - **Gateway validity window:** Circle Gateway rejects short authorization windows (`authorization_validity_too_short`); current working starter uses `maxTimeoutSeconds = 604900` (7 days plus buffer). The stream's 1-second cadence is therefore **how often Scout signs a fresh authorization**, not a 1-second authorization expiry. Early streaming spike: confirm Gateway accepts many overlapping, long-validity, per-tick authorizations from the same buyer in rapid succession.
+- **Ephemeral payer model:** streaming should use **one ephemeral wallet per stream session**, funded once from Scout's persistent funder, then many per-tick authorizations from that same session wallet. Creating a new ephemeral wallet per tick would add fatal gas/USDC transfer overhead and obscure the exact-cost invariant.
 - **Tap-to-stop:** Stopping clears the ticker — no further authorization is signed, Archer sees no valid auth for the interval, session closes. **Invariant: the buyer pays for exactly the ticks consumed, never more.**
 - **Settlement decoupling:** Instant verification (sub-500ms) is decoupled from batched onchain settlement; the stream feels live even though settlement lags. Surface **authorized/verified** volume in the UI, not settled volume.
 
