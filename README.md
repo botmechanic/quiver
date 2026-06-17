@@ -1,190 +1,185 @@
-# Arc Nanopayments Demo
+# Quiver
 
-Demonstrate gasless USDC nanopayments using [Circle Nanopayments](https://www.circle.com/nanopayments) on Arc. A **LangChain agent** acts as the buyer, autonomously paying for paywalled resources, while a **Next.js web app** acts as the seller, exposing x402-protected endpoints and providing a seller dashboard to monitor payments and withdraw earnings.
+Two AI agents that earn and spend real money, fractions of a cent at a time, over x402 on Arc.
 
-Circle Gateway batches many signed offchain authorizations into a single onchain settlement, enabling economically viable sub-cent payments.
+Quiver is a Lepton Agents Hackathon project built on the `circlefin/arc-nanopayments` starter. **Archer** is the seller agent: it produces strategy signals, protects them behind x402, and receives USDC through Circle Gateway. **Scout** is the buyer agent: it runs on a USDC budget, evaluates Archer's paid endpoints, and spends only when a signal is worth buying.
 
-<img alt="Arc Nanopayments Demo dashboard" src="public/screenshot.png" />
+The current deployed v0 proves the core loop: a public Archer endpoint returns `402 Payment Required`, Scout signs and retries with a Circle Gateway batched authorization, Archer returns `200 OK`, and the settled payment is recorded in Supabase.
 
-## Table of Contents
+Live v0: [https://quiver-self.vercel.app](https://quiver-self.vercel.app)
 
-- [Prerequisites](#prerequisites)
-- [Getting Started](#getting-started)
-- [How It Works](#how-it-works)
-- [Paywalled Endpoints](#paywalled-endpoints)
-- [Seller Dashboard](#seller-dashboard)
-- [Environment Variables](#environment-variables)
-- [Demo Credentials](#demo-credentials)
+## Why It Matters
 
-## Prerequisites
+Most x402 examples sell one discrete API response at a time. Quiver starts there, then builds toward the project headline: **pay-per-second streaming over x402**, composed from many small EIP-3009 authorizations that Circle Gateway batches for settlement on Arc.
 
-- **Node.js v22+** — Install via [nvm](https://github.com/nvm-sh/nvm)
-- **Supabase CLI** — Install via `npm install -g supabase` or see [Supabase CLI docs](https://supabase.com/docs/guides/cli/getting-started)
-- **Docker Desktop** (only if using the local Supabase path) — [Install Docker Desktop](https://www.docker.com/products/docker-desktop/)
-- *(Optional)* An **[OpenAI API key](https://platform.openai.com/api-keys)** — enables the LLM-driven payment agent. Without it, the agent runs in mock mode with scripted tool calls.
+The v0 focuses on the existence proof that matters first:
+
+- A deployed, payable Archer endpoint.
+- Real testnet USDC settlement through Circle Gateway.
+- A buyer agent transacting over the public internet.
+- A dashboard showing payments, payer addresses, endpoints, amounts, and seller Gateway balance.
+- A simple verifiable reasoning trace attached to each Archer response.
+
+## Project Flow
+
+```mermaid
+flowchart LR
+  Human["Human buyer or judge"] -->|"opens"| Dashboard["Quiver dashboard"]
+  Scout["Scout buyer agent"] -->|"unpaid request"| Archer["Archer x402 endpoints"]
+  Archer -->|"HTTP 402 + PAYMENT-REQUIRED"| Scout
+  Funder["Scout funder wallet"] -->|"funds session wallet"| Ephemeral["Ephemeral payer wallet"]
+  Scout -->|"signs GatewayWalletBatched auth"| Ephemeral
+  Ephemeral -->|"paid retry"| Archer
+  Archer -->|"verify and settle"| Gateway["Circle Gateway"]
+  Gateway -->|"batched USDC settlement"| Arc["Arc testnet"]
+  Archer -->|"200 + signal + trace hash"| Scout
+  Archer -->|"insert payment_events"| Supabase["Cloud Supabase"]
+  Supabase -->|"realtime payments and balance"| Dashboard
+```
+
+## Architecture
+
+- **Frontend and API:** Next.js App Router.
+- **Seller agent:** Archer endpoints under `app/api/archer`.
+- **Buyer agent:** Scout script in `agent.mts`.
+- **Payment protocol:** x402 (`402` response, `PAYMENT-REQUIRED`, signed retry, `PAYMENT-RESPONSE`).
+- **Settlement:** Circle Gateway batched settlement on Arc testnet.
+- **Persistence:** Cloud Supabase stores `payment_events` and withdrawals.
+- **Dashboard:** live payments table, Gateway balance dialog, and withdrawal UI.
+- **Grounding document:** `docs/PRD.md` is the product source of truth for future work.
+
+Circle Gateway requires a long enough authorization window for batched settlement. Quiver currently uses `maxTimeoutSeconds = 604900` (7 days plus buffer) in `lib/x402.ts`, which avoids Gateway's `authorization_validity_too_short` rejection.
+
+## Archer Endpoints
+
+All Archer endpoints are x402-protected and settle sub-cent USDC payments on Arc testnet.
+
+- `GET /api/archer/signal` costs `$0.001` and returns Archer's latest v0 strategy signal.
+- `GET /api/archer/market-state` costs `$0.0001` and returns the current market-state snapshot.
+- `POST /api/archer/compute` costs `$0.003` and runs a deeper v0 Archer analysis over submitted context.
+
+Each response includes:
+
+- `decision`: `buy`, `sell`, or `hold`.
+- `confidence`: a number from `0` to `1`.
+- `factors`: short human-readable reasons behind the signal.
+- `reasoning.trace_hash`: a SHA-256 hash of the canonicalized reasoning trace.
+
+The trace is intentionally simple for v0. A buyer can recompute the hash over the returned `reasoning.trace` object with sorted keys to confirm the trace was not altered.
+
+## Scout Buyer Agent
+
+Scout runs locally today:
+
+```bash
+BASE_URL=https://quiver-self.vercel.app npm run agent -- --limit 0.001
+```
+
+The persistent `BUYER_PRIVATE_KEY` is a funder wallet. On each run, Scout creates a fresh ephemeral payer wallet, transfers gas and USDC to it, deposits into Gateway, and pays Archer from that session wallet. This makes payer addresses differ between runs while the budget is still controlled at the funder level.
 
 ## Getting Started
 
-1. Clone the repository and install dependencies:
+Install dependencies:
 
-   ```bash
-   git clone https://github.com/akelani-circle/arc-nanopayments-demo.git
-   cd arc-nanopayments-demo
-   npm install
-   ```
+```bash
+npm install
+```
 
-2. Set up environment variables:
+Create your env file:
 
-   ```bash
-   cp .env.example .env.local
-   ```
+```bash
+cp .env.example .env.local
+```
 
-   Then edit `.env.local` and fill in all required values (see [Environment Variables](#environment-variables) section below).
+Generate test wallets:
 
-3. Generate seller and buyer wallets:
+```bash
+npm run generate-wallets
+```
 
-   ```bash
-   npm run generate-wallets
-   ```
+Fund the buyer/funder wallet with Arc testnet USDC from the [Circle faucet](https://faucet.circle.com/).
 
-   This creates two EVM wallets (seller and buyer) and writes the addresses and private keys to `.env.local`. Follow the on-screen instructions to fund the buyer wallet with testnet USDC via the [Circle faucet](https://faucet.circle.com/).
+Set up cloud Supabase:
 
-4. Set up the database — Choose one of the two paths below:
+```bash
+npx supabase link --project-ref <your-project-ref>
+npx supabase db push
+```
 
-   <details>
-   <summary><strong>Path 1: Local Supabase (Docker)</strong></summary>
+Run the seller app:
 
-   Requires Docker Desktop installed and running.
+```bash
+npm run dev
+```
 
-   ```bash
-   npx supabase start
-   npx supabase migration up
-   ```
+Run Scout locally:
 
-   The output of `npx supabase start` will display the Supabase URL and API keys needed for your `.env.local`.
-
-   </details>
-
-   <details>
-   <summary><strong>Path 2: Remote Supabase (Cloud)</strong></summary>
-
-   Requires a [Supabase](https://supabase.com/) account and project.
-
-   ```bash
-   npx supabase link --project-ref <your-project-ref>
-   npx supabase db push
-   ```
-
-   Retrieve your project URL and API keys from the Supabase dashboard under **Settings > API**.
-
-   </details>
-
-5. Start the development server:
-
-   ```bash
-   npm run dev
-   ```
-
-   The app will be available at `http://localhost:3000`.
-
-6. Run the AI payment agent:
-
-   ```bash
-   npm run agent
-   ```
-
-   The agent uses the buyer wallet to purchase resources from the x402-protected premium endpoints, paying with USDC on the Arc Testnet. If `OPENAI_API_KEY` is set, the agent uses the LLM to decide which tools to call; otherwise it falls back to a scripted mock run. You can optionally pass a custom query:
-
-   ```bash
-   npm run agent -- "Buy me Archer's signal at http://localhost:3000/api/archer/signal"
-   ```
-
-   To set a USDC spending limit, use the `--limit` flag. The agent will pause when the limit is reached and prompt for additional allowance:
-
-   ```bash
-   npm run agent -- --limit 0.5
-   ```
-
-## How It Works
-
-- Built with [Next.js](https://nextjs.org/) App Router and [Supabase](https://supabase.com/)
-- Uses the [x402 protocol](https://www.x402.org/) for HTTP 402 nanopayments with USDC on the [Arc Network](https://arc.circle.com/)
-- Uses [Circle's x402 batching SDK](https://www.npmjs.com/package/@circle-fin/x402-batching) (`GatewayClient`) for gasless payment facilitation
-- Includes an AI payment agent built with [LangChain](https://js.langchain.com/) and [Deep Agents](https://www.npmjs.com/package/deepagents) that can check balances, deposit USDC into Gateway, verify endpoint support, and autonomously pay for x402-protected resources
-- Seller dashboard with real-time payment monitoring, Gateway balance display, and cross-chain withdrawal support
-- Payment events and withdrawals are persisted to Supabase with real-time subscriptions
-- Styled with [Tailwind CSS](https://tailwindcss.com) and components from [shadcn/ui](https://ui.shadcn.com/)
-
-## Archer Paywalled Endpoints
-
-Archer exposes x402-protected API routes at different price points:
-
-| Endpoint | Method | Price (USDC) | Description |
-| --- | --- | --- | --- |
-| `/api/archer/signal` | GET | $0.001 | Returns Archer's latest v0 strategy signal |
-| `/api/archer/market-state` | GET | $0.0001 | Returns Archer's current market-state snapshot |
-| `/api/archer/compute` | POST | $0.003 | Runs a deeper v0 Archer analysis over submitted context |
-
-Each endpoint returns `402 Payment Required` for unpaid requests. The buyer agent automatically signs the authorization and retries with the payment signature to receive the content.
-
-Circle Gateway batched payments require authorization validity long enough for settlement batching. The seller sets `maxTimeoutSeconds` to `604900` (7 days plus buffer) so buyer signatures are accepted by the Gateway verifier.
-
-Each Archer response includes a simple verifiable reasoning trace. Buyers can recompute `reasoning.trace_hash` by canonicalizing the returned `reasoning.trace` object with sorted keys and hashing that canonical string with SHA-256.
-
-## Seller Dashboard
-
-The dashboard at `/dashboard` provides:
-
-- **Gateway Balance** — Top-bar badge showing the seller's available Gateway balance, with a detail dialog for total, withdrawing, withdrawable, and wallet USDC balances
-- **Payments Table** — Real-time list of incoming nanopayments with filtering and sorting, linked to [Arc Testnet Explorer](https://testnet.arcscan.app)
-- **Withdraw Dialog** — Withdraw available USDC from Gateway to a wallet address on any supported testnet chain (Arc Testnet, Base Sepolia, Ethereum Sepolia, Arbitrum Sepolia, Optimism Sepolia, Avalanche Fuji, Polygon Amoy)
+```bash
+npm run agent -- --limit 0.001
+```
 
 ## Environment Variables
 
-Copy `.env.example` to `.env.local` and fill in the required values:
+Required for the deployed seller app:
 
 ```bash
-# Supabase
 NEXT_PUBLIC_SUPABASE_URL=your-project-url
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your-publishable-or-anon-key
 SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
-
-# x402 / Circle Nanopayments
-SELLER_ADDRESS=0xYourWalletAddress
+SELLER_ADDRESS=0xYourSellerWalletAddress
 SELLER_PRIVATE_KEY=0xYourSellerPrivateKey
-
-# Buyer wallet (for the payment agent)
-BUYER_ADDRESS=0xYourBuyerWalletAddress
-BUYER_PRIVATE_KEY=0xYourBuyerPrivateKey
-
-# AI Payment Agent (optional — omit to run in mock mode)
-# OPENAI_API_KEY=your-openai-api-key
 ```
 
-| Variable | Scope | Purpose |
-| --- | --- | --- |
-| `NEXT_PUBLIC_SUPABASE_URL` | Public | Supabase project URL. |
-| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Public | Supabase anonymous / publishable key. |
-| `SUPABASE_SERVICE_ROLE_KEY` | Server-side | Supabase service-role key, used to record payment events and withdrawals. |
-| `SELLER_ADDRESS` | Server-side | EVM wallet address for receiving USDC payments. |
-| `SELLER_PRIVATE_KEY` | Server-side | Seller wallet private key, used for Gateway balance queries and withdrawals. |
-| `BUYER_ADDRESS` | Agent | Buyer wallet address for making payments. |
-| `BUYER_PRIVATE_KEY` | Agent | Buyer wallet private key for signing payment authorizations. |
-| `OPENAI_API_KEY` | Agent | *(Optional)* OpenAI API key. If omitted, the agent runs in mock mode with scripted tool calls. |
+Required only for running Scout:
 
-> **Tip:** Run `npm run generate-wallets` to auto-generate the `SELLER_ADDRESS`, `SELLER_PRIVATE_KEY`, `BUYER_ADDRESS`, and `BUYER_PRIVATE_KEY` values.
+```bash
+BUYER_ADDRESS=0xYourBuyerFunderAddress
+BUYER_PRIVATE_KEY=0xYourBuyerFunderPrivateKey
+```
 
-## Demo Credentials
+Optional:
 
-The app uses a hardcoded demo account for local development:
+```bash
+OPENAI_API_KEY=your-openai-api-key
+```
 
-| Email | Password |
-| --- | --- |
-| `admin@example.com` | `123456` |
+## Dashboard
 
-## Security & Usage Model
+The dashboard is available at `/dashboard`.
 
-This sample application:
-- Assumes testnet usage only
-- Handles secrets via environment variables
-- Is not intended for production use without modification
+Demo credentials:
+
+```text
+Email: admin@example.com
+Password: 123456
+```
+
+The dashboard shows:
+
+- Incoming Archer payments.
+- Payer addresses, endpoints, amounts, and Gateway transaction IDs.
+- Seller Gateway balance and wallet balance.
+- Withdrawal tooling inherited from the starter.
+
+## Deployment
+
+Quiver is deployed on Vercel with cloud Supabase. Set the seller env vars in Vercel before deploying so the first build has Supabase and seller wallet configuration.
+
+For v0, do not put buyer keys in Vercel. Scout runs locally against the deployed `BASE_URL`.
+
+## Security And Scope
+
+This is a testnet hackathon project:
+
+- Uses Arc testnet USDC only.
+- Uses throwaway generated wallets.
+- Keeps `.env` and `.env.local` out of git.
+- Stores the seller private key in Vercel env vars only for testnet demo purposes.
+- Does not provide investment advice and is not a production trading system.
+
+## Roadmap
+
+- Dynamic Archer pricing based on compute cost and confidence.
+- Scout cost-benefit logic that can decline low-confidence signals.
+- Human-friendly pay-once path for traction.
+- Pay-per-second x402 streaming with one ephemeral wallet per stream session and many per-tick Gateway authorizations.
