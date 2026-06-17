@@ -28,8 +28,8 @@ const defaultUrl = process.env.VERCEL_URL
 
 export const metadata: Metadata = {
   metadataBase: new URL(defaultUrl),
-  title: "Arc Nanopayments Demo",
-  description: "Arc nanopayments demo application",
+  title: "Quiver",
+  description: "Agentic nanopayments over x402 on Arc",
 };
 
 const geistSans = Geist({

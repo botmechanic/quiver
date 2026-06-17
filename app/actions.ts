@@ -21,12 +21,16 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
-const ADMIN_EMAIL = "admin@example.com";
-const ADMIN_PASSWORD = "123456";
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL;
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 
 export async function login(formData: FormData) {
   const email = formData.get("email") as string;
   const password = formData.get("password") as string;
+
+  if (!ADMIN_EMAIL || !ADMIN_PASSWORD) {
+    return { error: "Dashboard credentials are not configured" };
+  }
 
   if (email !== ADMIN_EMAIL || password !== ADMIN_PASSWORD) {
     return { error: "Invalid credentials" };

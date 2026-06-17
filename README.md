@@ -126,6 +126,8 @@ Required for the deployed seller app:
 NEXT_PUBLIC_SUPABASE_URL=your-project-url
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your-publishable-or-anon-key
 SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+ADMIN_EMAIL=your-dashboard-email
+ADMIN_PASSWORD=your-dashboard-password
 SELLER_ADDRESS=0xYourSellerWalletAddress
 SELLER_PRIVATE_KEY=0xYourSellerPrivateKey
 ```
@@ -147,12 +149,7 @@ OPENAI_API_KEY=your-openai-api-key
 
 The dashboard is available at `/dashboard`.
 
-Demo credentials:
-
-```text
-Email: admin@example.com
-Password: 123456
-```
+Dashboard access is controlled by `ADMIN_EMAIL` and `ADMIN_PASSWORD`. Set strong, private values in Vercel before deploying and do not publish them in the repo.
 
 The dashboard shows:
 
@@ -174,6 +171,7 @@ This is a testnet hackathon project:
 - Uses Arc testnet USDC only.
 - Uses throwaway generated wallets.
 - Keeps `.env` and `.env.local` out of git.
+- Keeps dashboard credentials in private environment variables.
 - Stores the seller private key in Vercel env vars only for testnet demo purposes.
 - Does not provide investment advice and is not a production trading system.
 
