@@ -7,20 +7,34 @@ import {
   http,
   parseEther,
   parseUnits,
+  type Address,
+  type PublicClient,
 } from "viem";
 import { arcTestnet } from "viem/chains";
-import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
+import {
+  generatePrivateKey,
+  privateKeyToAccount,
+  type PrivateKeyAccount,
+} from "viem/accounts";
 
 export const PAYMENT_SOURCE_HEADER = "x-quiver-payment-source";
 
 const ARC_TESTNET_USDC = "0x3600000000000000000000000000000000000000" as const;
 const ARC_TESTNET_RPC = "https://rpc.testnet.arc.network";
 const GAS_FUND_AMOUNT = parseEther("0.01");
+const MIN_NATIVE_GAS = parseEther("0.005");
 const DEMO_DEPOSIT_AMOUNT = process.env.DEMO_DEPOSIT_AMOUNT ?? "0.01";
 const MIN_DEMO_DEPOSIT = parseUnits("0.002", 6);
 const REDEPOSIT_THRESHOLD = BigInt(100_000);
 
-let gatewayPromise: Promise<GatewayClient> | null = null;
+interface DemoSession {
+  gateway: GatewayClient;
+  ephemeralAddress: Address;
+  funderAccount: PrivateKeyAccount;
+  publicClient: PublicClient;
+}
+
+let sessionPromise: Promise<DemoSession> | null = null;
 
 async function withNonceRetry<T>(
   fn: () => Promise<T>,
@@ -47,25 +61,58 @@ async function withNonceRetry<T>(
   throw new Error("unreachable");
 }
 
-async function initDemoGateway(): Promise<GatewayClient> {
+function getFunderAccount(): PrivateKeyAccount {
   const funderKey = process.env.BUYER_PRIVATE_KEY as `0x${string}` | undefined;
   if (!funderKey) {
     throw new Error("Missing BUYER_PRIVATE_KEY for demo-funded payments");
   }
+  return privateKeyToAccount(funderKey);
+}
 
-  const ephemeralKey = generatePrivateKey();
-  const ephemeralAccount = privateKeyToAccount(ephemeralKey);
-  const funderAccount = privateKeyToAccount(funderKey);
-
-  const publicClient = createPublicClient({
-    chain: arcTestnet,
-    transport: http(ARC_TESTNET_RPC),
-  });
-  const funderWallet = createWalletClient({
+function createFunderWallet(funderAccount: PrivateKeyAccount) {
+  return createWalletClient({
     account: funderAccount,
     chain: arcTestnet,
     transport: http(ARC_TESTNET_RPC),
   });
+}
+
+async function ensureEphemeralGas(
+  session: DemoSession,
+  reason: string,
+): Promise<void> {
+  const native = await session.publicClient.getBalance({
+    address: session.ephemeralAddress,
+  });
+
+  if (native >= MIN_NATIVE_GAS) return;
+
+  console.log(
+    `[demo/buyer] Topping up native gas for ${session.ephemeralAddress} (${reason})`,
+  );
+
+  const funderWallet = createFunderWallet(session.funderAccount);
+  const gasTxHash = await withNonceRetry(
+    () =>
+      funderWallet.sendTransaction({
+        to: session.ephemeralAddress,
+        value: GAS_FUND_AMOUNT,
+      }),
+    "Gas top-up",
+  );
+  await session.publicClient.waitForTransactionReceipt({ hash: gasTxHash });
+}
+
+async function initDemoSession(): Promise<DemoSession> {
+  const funderAccount = getFunderAccount();
+  const publicClient = createPublicClient({
+    chain: arcTestnet,
+    transport: http(ARC_TESTNET_RPC),
+  });
+  const funderWallet = createFunderWallet(funderAccount);
+
+  const ephemeralKey = generatePrivateKey();
+  const ephemeralAccount = privateKeyToAccount(ephemeralKey);
 
   console.log(
     `[demo/buyer] Funding ephemeral wallet ${ephemeralAccount.address} from funder ${funderAccount.address}`,
@@ -112,40 +159,48 @@ async function initDemoGateway(): Promise<GatewayClient> {
   );
   await publicClient.waitForTransactionReceipt({ hash: usdcTxHash });
 
-  const gateway = new GatewayClient({
-    chain: "arcTestnet",
-    privateKey: ephemeralKey,
-  });
+  const session: DemoSession = {
+    gateway: new GatewayClient({
+      chain: "arcTestnet",
+      privateKey: ephemeralKey,
+    }),
+    ephemeralAddress: ephemeralAccount.address,
+    funderAccount,
+    publicClient,
+  };
+
+  await ensureEphemeralGas(session, "before initial deposit");
 
   console.log(
     `[demo/buyer] Depositing ${depositLabel} USDC into Gateway Wallet...`,
   );
-  await gateway.deposit(depositLabel);
+  await session.gateway.deposit(depositLabel);
 
-  return gateway;
+  return session;
 }
 
-async function getDemoGateway(): Promise<GatewayClient> {
-  if (!gatewayPromise) {
-    gatewayPromise = initDemoGateway().catch((err) => {
-      gatewayPromise = null;
+async function getDemoSession(): Promise<DemoSession> {
+  if (!sessionPromise) {
+    sessionPromise = initDemoSession().catch((err) => {
+      sessionPromise = null;
       throw err;
     });
   }
-  return gatewayPromise;
+  return sessionPromise;
 }
 
-async function ensureGatewayBalance(gateway: GatewayClient) {
-  const balances = await gateway.getBalances();
+async function ensureGatewayBalance(session: DemoSession) {
+  const balances = await session.gateway.getBalances();
   if (balances.gateway.available >= REDEPOSIT_THRESHOLD) return;
 
   if (balances.wallet.balance > BigInt(0)) {
+    await ensureEphemeralGas(session, "before redeposit");
     const topUp = formatUnits(balances.wallet.balance, 6);
-    await gateway.deposit(topUp);
+    await session.gateway.deposit(topUp);
     return;
   }
 
-  gatewayPromise = null;
+  sessionPromise = null;
   throw new Error(
     "Demo Gateway balance exhausted — refill the funder wallet or wait for cooldown",
   );
@@ -167,11 +222,11 @@ export async function executeDemoBuy(
     body?: unknown;
   },
 ) {
-  const gateway = await getDemoGateway();
-  await ensureGatewayBalance(gateway);
+  const session = await getDemoSession();
+  await ensureGatewayBalance(session);
 
   const start = Date.now();
-  const result = await gateway.pay(targetUrl, {
+  const result = await session.gateway.pay(targetUrl, {
     method: options?.method ?? "GET",
     body: options?.body,
     headers: {
@@ -183,7 +238,7 @@ export async function executeDemoBuy(
     data: result.data,
     amount: result.formattedAmount,
     transaction: result.transaction,
-    payer: gateway.address,
+    payer: session.gateway.address,
     elapsedMs: Date.now() - start,
   };
 }
