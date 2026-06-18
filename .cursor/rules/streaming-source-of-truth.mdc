@@ -1,0 +1,26 @@
+---
+description: Streaming tick-count source of truth — stream_events ground truth, reconciliation rules, 409-path testing
+globs:
+  - app/api/demo/stream/**
+  - lib/demo/stream-*
+  - lib/stream/**
+  - components/dashboard/stream-meter-panel.tsx
+  - hooks/use-stream-events.ts
+---
+
+# Streaming: tick-count source of truth
+
+`stream_events` rows are ground truth for how many ticks were paid/verified. x402 inserts the row inside Archer's verify, *before* the tick route returns — so a row can land even after the client aborts, after `/stop`, or on a different Vercel instance than the one that started the session.
+
+## Rules when touching stream code
+
+- Any user-facing count (meter, banner label, `/stop` response) must derive from `verifiedStreamTickCount(sessionId)` / a `stream_events` query — never from the in-memory `sessions` Map, `demo_stream_sessions.tick_count`, client `tickRef`/`localTicks`, or a frozen `stopSummary`.
+- Never `Math.max(cache, dbCount)` to "be safe" — that lets a stale-high cache win. Read the DB count and use it.
+- Before deciding 409-vs-`advanceStreamTick` after a payment, re-read `stopped` from the DB (`refreshDemoStreamSessionFromDb`) — the in-memory snapshot predates the 10–26s payment and may be stale on cold start or cross-instance.
+- Session-row counters (`demo_stream_sessions.tick_count`) are a convenience cache; align them *to* `stream_events` (align-up only), treat divergence as a bug to surface (`session_tick_drift`), not a value to trust.
+- Test the fail-close / 409 path, not just the warm sequential happy path. The happy path doesn't exercise the branch where a tick completes after `stopped` flips true.
+
+## Gate test (prod, after deploy)
+
+1. Warm path: start → fail-close → wait 5s → meter, banner, and `stream_events` all match for one `session_id`.
+2. **409 path:** start stream, fire a tick, call `/stop` while that tick is mid-flight (cold instance or `STREAM_DEBUG_DELAY_MS` on preview). Confirm `demo_stream_sessions.tick_count` equals max `stream_events` tick (including the post-stop tick) and `/stop` reports aligned counts.

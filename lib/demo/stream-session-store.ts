@@ -78,7 +78,7 @@ export async function alignSessionTickCountWithEvents(
   const loaded = await loadStreamSession(sessionId);
   if (!loaded) return dbTicks;
 
-  if (loaded.tickCount !== dbTicks) {
+  if (dbTicks > loaded.tickCount) {
     loaded.tickCount = dbTicks;
     await persistStreamSession(loaded);
   }
