@@ -19,13 +19,24 @@
 import { BatchFacilitatorClient } from "@circle-fin/x402-batching/server";
 import { createClient } from "@supabase/supabase-js";
 import { NextRequest, NextResponse } from "next/server";
+import {
+  PAYMENT_SOURCE_HEADER,
+  STREAM_SESSION_HEADER,
+  STREAM_TICK_HEADER,
+} from "@/lib/stream/headers";
+
+export const sellerAddress = process.env.SELLER_ADDRESS as `0x${string}`;
 
 // Arc Testnet contract addresses (from @circle-fin/x402-batching SDK)
 const ARC_TESTNET_NETWORK = "eip155:5042002";
 const ARC_TESTNET_USDC = "0x3600000000000000000000000000000000000000";
 const ARC_TESTNET_GATEWAY_WALLET = "0x0077777d7EBA4688BDeF3E311b846F25870A19B9";
 
-export const sellerAddress = process.env.SELLER_ADDRESS as `0x${string}`;
+export {
+  PAYMENT_SOURCE_HEADER,
+  STREAM_SESSION_HEADER,
+  STREAM_TICK_HEADER,
+} from "@/lib/stream/headers";
 
 const facilitator = new BatchFacilitatorClient();
 
@@ -33,6 +44,50 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
 );
+
+function resolvePaymentSource(req: NextRequest): "demo" | "scout" | "stream" {
+  if (req.headers.get(PAYMENT_SOURCE_HEADER) === "demo") return "demo";
+  if (req.headers.get(STREAM_SESSION_HEADER)) return "stream";
+  return "scout";
+}
+
+async function recordStreamEvent(
+  req: NextRequest,
+  details: {
+    endpoint: string;
+    payer: string;
+    amountUsdc: string;
+    gatewayTx: string | null;
+    raw: Record<string, unknown>;
+  },
+) {
+  const sessionId = req.headers.get(STREAM_SESSION_HEADER);
+  const tickRaw = req.headers.get(STREAM_TICK_HEADER);
+  if (!sessionId || !tickRaw) return;
+
+  const tickNumber = parseInt(tickRaw, 10);
+  if (!Number.isFinite(tickNumber) || tickNumber < 1) return;
+
+  const amount = parseFloat(details.amountUsdc);
+  const cumulativeUsdc = (amount * tickNumber).toFixed(6);
+
+  const { error } = await supabase.from("stream_events").insert({
+    session_id: sessionId,
+    tick_number: tickNumber,
+    amount_usdc: details.amountUsdc,
+    cumulative_usdc: cumulativeUsdc,
+    verified_at: new Date().toISOString(),
+    status: "verified",
+    payer: details.payer,
+    endpoint: details.endpoint,
+    gateway_tx: details.gatewayTx,
+    raw: details.raw,
+  });
+
+  if (error) {
+    console.error("[x402] Failed to record stream event:", error.message);
+  }
+}
 
 interface PaymentPayload {
   x402Version: number;
@@ -60,9 +115,9 @@ function buildPaymentRequirements(price: string) {
     asset: ARC_TESTNET_USDC,
     amount: amount.toString(),
     payTo: sellerAddress,
-    // STREAMING-OPEN-Q: see docs/PRD.md §4.5. Streaming should fund one
-    // ephemeral wallet per session, then sign many long-validity per-tick
-    // authorizations from it; confirm Gateway accepts overlapping auths.
+    // STREAMING-OPEN-Q: resolved GREEN (Jun 18) — see scripts/spike-overlapping-auth.mts.
+    // Streaming funds one ephemeral wallet per session, then signs many long-validity per-tick
+    // authorizations from it; Gateway accepts overlapping auths at ~1 Hz.
     maxTimeoutSeconds: 604900,
     extra: {
       name: "GatewayWalletBatched",
@@ -189,8 +244,17 @@ export function withGateway<TContext = void>(
       // Record payment event in Supabase
       const amountUsdc = (Number(requirements.amount) / 1e6).toString();
       const payer = settleResult.payer ?? verifyResult.payer ?? "unknown";
-      const paymentSource =
-        req.headers.get("x-quiver-payment-source") === "demo" ? "demo" : "scout";
+      const paymentSource = resolvePaymentSource(req);
+
+      const paymentRaw = {
+        requirements,
+        settleResult,
+        quoted_price_usdc: quote.priceUsdc ?? amountUsdc,
+        price_reason: quote.reason,
+        source: paymentSource,
+        stream_session: req.headers.get(STREAM_SESSION_HEADER),
+        stream_tick: req.headers.get(STREAM_TICK_HEADER),
+      };
 
       const { error } = await supabase.from("payment_events").insert({
         endpoint,
@@ -198,18 +262,20 @@ export function withGateway<TContext = void>(
         amount_usdc: amountUsdc,
         network: requirements.network,
         gateway_tx: settleResult.transaction ?? null,
-        raw: {
-          requirements,
-          settleResult,
-          quoted_price_usdc: quote.priceUsdc ?? amountUsdc,
-          price_reason: quote.reason,
-          source: paymentSource,
-        },
+        raw: paymentRaw,
       });
 
       if (error) {
         console.error("Failed to record payment event:", error.message);
       }
+
+      await recordStreamEvent(req, {
+        endpoint,
+        payer,
+        amountUsdc,
+        gatewayTx: settleResult.transaction ?? null,
+        raw: paymentRaw,
+      });
 
       console.log(
         `[x402] Payment settled: ${endpoint} — ${amountUsdc} USDC from ${payer}`,

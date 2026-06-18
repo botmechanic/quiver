@@ -57,12 +57,24 @@ export function generateArcherTrace(
   now = new Date(),
 ): ArcherTrace {
   const bucket = Math.floor(now.getTime() / 60_000);
-  const symbolSeed = [...symbol].reduce(
-    (sum, char) => sum + char.charCodeAt(0),
-    0,
-  );
-  const seed = bucket + symbolSeed;
+  return generateArcherTraceFromSeed(symbol, bucket, now);
+}
 
+/** Per-second stream slice — tick shifts the seed so each paid tick differs. */
+export function generateStreamTrace(
+  tick: number,
+  symbol = "ARC-USDC",
+  now = new Date(),
+): ArcherTrace {
+  const secondBucket = Math.floor(now.getTime() / 1000);
+  return generateArcherTraceFromSeed(symbol, secondBucket + tick * 997, now);
+}
+
+function generateArcherTraceFromSeed(
+  symbol: string,
+  seed: number,
+  now: Date,
+): ArcherTrace {
   const momentum = round(seededWave(seed, 0.1) * 2 - 1);
   const liquidity = round(Math.abs(seededWave(seed, 1.7)));
   const volatility = round(Math.abs(seededWave(seed, 3.1)));

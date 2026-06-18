@@ -43,6 +43,7 @@ export function PaymentMetrics({ events }: { events: PaymentEvent[] }) {
   const stats = useMemo(() => {
     const demoEvents = events.filter((ev) => getPaymentSource(ev) === "demo");
     const scoutEvents = events.filter((ev) => getPaymentSource(ev) === "scout");
+    const streamEvents = events.filter((ev) => getPaymentSource(ev) === "stream");
     const scoutPayers = new Set(scoutEvents.map((ev) => ev.payer.toLowerCase()));
 
     return {
@@ -50,6 +51,8 @@ export function PaymentMetrics({ events }: { events: PaymentEvent[] }) {
       demoVolume: formatUsdcTotal(demoEvents),
       scoutCount: scoutEvents.length,
       scoutVolume: formatUsdcTotal(scoutEvents),
+      streamCount: streamEvents.length,
+      streamVolume: formatUsdcTotal(streamEvents),
       scoutPayers: scoutPayers.size,
     };
   }, [events]);
@@ -64,7 +67,7 @@ export function PaymentMetrics({ events }: { events: PaymentEvent[] }) {
           demo ≠ distinct payers
         </Badge>
       </div>
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
         <StatCard
           label="Demo buys"
           value={String(stats.demoCount)}
@@ -77,6 +80,12 @@ export function PaymentMetrics({ events }: { events: PaymentEvent[] }) {
           detail={`$${stats.scoutVolume} USDC — agent buyer settlements`}
         />
         <StatCard
+          label="Stream ticks"
+          value={String(stats.streamCount)}
+          detail={`$${stats.streamVolume} USDC authorized (verified, not settled)`}
+          accent="green"
+        />
+        <StatCard
           label="Distinct Scout payers"
           value={String(stats.scoutPayers)}
           detail="Ephemeral wallets used by Scout runs"
@@ -85,7 +94,6 @@ export function PaymentMetrics({ events }: { events: PaymentEvent[] }) {
           label="Total settled"
           value={String(events.length)}
           detail={`$${formatUsdcTotal(events)} USDC across all sources`}
-          accent="green"
         />
       </div>
     </div>

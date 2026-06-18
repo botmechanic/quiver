@@ -1,7 +1,7 @@
 # Quiver — Product Requirements Document
 
 > **Status:** Draft v1 · Lepton Agents Hackathon (Canteen × Circle) · June 15–29, 2026  
-> **Implementation (Jun 17):** v0 deployed · dynamic pricing · Scout buy/decline · `/try` demo path shipped · streaming not started  
+> **Implementation (Jun 18):** v0 deployed · dynamic pricing · Scout buy/decline · `/try` demo path · **streaming loop + dashboard meter (days 7–8)** · days 9–10 hardening not started  
 > **Schedule:** see `docs/ROADMAP.md`
 > **One-liner:** Two AI agents that earn and spend real money — fractions of a cent at a time — over x402 on Arc, with the headline feature being **true pay-per-second streaming**.
 
@@ -92,7 +92,7 @@ Each signal ships with the decision, a confidence score, the factors behind it, 
 There is **no native "approve a rate" primitive**; streaming is composed from **discrete per-tick EIP-3009 authorizations** that Gateway batches.
 - **Tick interval:** 1 second (matches the "per second" framing; sub-500ms Gateway verification fits inside the tick).
 - **Loop:** `startStream` opens a session and begins a per-second ticker on Scout's side. Each tick signs one EIP-3009 `TransferWithAuthorization` for that tick's price (e.g. ~$0.0001/sec for the live decision feed) against the `GatewayWalletBatched` domain, reusing the same `GatewayClient.pay()` path as discrete endpoints. Archer verifies instantly and releases that tick's slice of the live decision feed.
-- **Gateway validity window:** Circle Gateway rejects short authorization windows (`authorization_validity_too_short`); current working starter uses `maxTimeoutSeconds = 604900` (7 days plus buffer). The stream's 1-second cadence is therefore **how often Scout signs a fresh authorization**, not a 1-second authorization expiry. Early streaming spike: confirm Gateway accepts many overlapping, long-validity, per-tick authorizations from the same buyer in rapid succession.
+- **Gateway validity window:** Circle Gateway rejects short authorization windows (`authorization_validity_too_short`); current working starter uses `maxTimeoutSeconds = 604900` (7 days plus buffer). The stream's 1-second cadence is therefore **how often Scout signs a fresh authorization**, not a 1-second authorization expiry. **Confirmed (Jun 18):** Gateway accepts many overlapping long-validity per-tick authorizations from one funded ephemeral wallet at ~1 Hz (`scripts/spike-overlapping-auth.mts` — GREEN).
 - **Ephemeral payer model:** streaming should use **one ephemeral wallet per stream session**, funded once from Scout's persistent funder, then many per-tick authorizations from that same session wallet. Creating a new ephemeral wallet per tick would add fatal gas/USDC transfer overhead and obscure the exact-cost invariant.
 - **Tap-to-stop:** Stopping clears the ticker — no further authorization is signed, Archer sees no valid auth for the interval, session closes. **Invariant: the buyer pays for exactly the ticks consumed, never more.**
 - **Settlement decoupling:** Instant verification (sub-500ms) is decoupled from batched onchain settlement; the stream feels live even though settlement lags. Surface **authorized/verified** volume in the UI, not settled volume.
@@ -100,10 +100,10 @@ There is **no native "approve a rate" primitive**; streaming is composed from **
 ### 4.6 Agent-to-agent loop (vehicle, not headline)
 One Archer instance sells; one Scout instance buys on a budget; both settle sub-cent on Arc with no human in the loop. Makes the demo write itself: two agents settling a fraction of a cent in <0.5s.
 
-### 4.7 Live dashboard — **partial (discrete payments shipped)**
-Real-time view of money moving. Counters proven to resonate in this ecosystem: **total payments, total volume (USDC), distinct paying clients, average transaction size (target sub-cent).** Plus the live streaming meter (cumulative authorized total ticking up, rate readout, session duration). Powered by Supabase real-time subscriptions over a `stream_events` / payments table.
+### 4.7 Live dashboard — **partial (streaming meter shipped)**
+Real-time view of money moving. Counters proven to resonate in this ecosystem: **total payments, total volume (USDC), distinct paying clients, average transaction size (target sub-cent).** Plus the live streaming meter (cumulative authorized total ticking up, rate readout, session duration). Powered by Supabase real-time subscriptions over `stream_events` and `payment_events`.
 
-**Shipped:** payments table with realtime inserts; **demo vs Scout split** in dashboard metrics (`payment_events.raw.source`); source badges per row. **Not shipped:** streaming meter.
+**Shipped:** payments table with realtime inserts; **demo vs Scout vs stream split** in dashboard metrics (`payment_events.raw.source`); source badges per row; **live stream meter** on `/dashboard` (authorized/verified volume, tap-to-stop, exact-cost invariant banner). **Not shipped:** days 9–10 adversarial hardening visible in demo.
 
 ---
 
@@ -113,7 +113,7 @@ Real-time view of money moving. Counters proven to resonate in this ecosystem: *
 - **Stack:** TypeScript throughout. **Node 22 + npm** (not Bun). **Next.js App Router** = frontend (dashboard) + backend (x402 route handlers / Gateway calls) in one app. Buyer agent is a standalone script (`agent.mts`).
 - **Database:** **Cloud/remote Supabase** (Postgres + real-time). **No Docker / no local Supabase** — the cloud project serves both local dev and the Vercel deploy. Supabase real-time is **load-bearing** for the streaming meter (same channel as the payments dashboard) — do not hand-roll websockets.
 - **Payments:** x402 protocol (HTTP 402 → `PAYMENT-REQUIRED` → signed retry → 200 + `PAYMENT-RESPONSE`). Circle Gateway batched settlement via EIP-3009 `TransferWithAuthorization` against `GatewayWalletBatched`; `GatewayClient.pay()` wraps the buyer-side loop. Settlement on **Arc testnet**; buyer wallet funded from the **Circle faucet**.
-- **Tooling:** ARC CLI (Canteen-hosted Arc RPC + context) and Circle CLI installed and authenticated. `npm run generate-wallets` for test wallets.
+- **Tooling — Canteen ARC CLI (`arc-canteen`):** Required project tool. Install: `uv tool install git+https://github.com/the-canteen-dev/ARC-cli.git` (binary: `~/.local/bin/arc-canteen`). **Context/docs grounding:** `arc-canteen context sync` then `arc-canteen context` / `arc-canteen context --paths` — pulls Arc + Circle docs and sample codebases into `~/.arc-canteen/context/` (reference only; do not copy into this repo). **RPC (optional, local-verify-first):** `arc-canteen rpc-url --export` or `arc-canteen shell-init` sets `$RPC`; proxy enforces a read-mostly + `eth_sendRawTransaction` allowlist — do **not** point Vercel/production settlement at Canteen RPC until a local 402→200→settle test passes and you explicitly OK the switch (production stays on `https://rpc.testnet.arc.network` until then). **Hackathon updates:** progress reaches Canteen's judging server via `arc-canteen update traction` and `arc-canteen update product` (requires `arc-canteen login` + `arc-canteen profile edit` under your identity). Also: **Circle CLI** installed and authenticated. `npm run generate-wallets` for test wallets.
 - **Deploy:** **Vercel** + cloud Supabase. Production: [quiver-self.vercel.app](https://quiver-self.vercel.app). Public demo: [quiver-self.vercel.app/try](https://quiver-self.vercel.app/try). `BASE_URL` in Vercel must match the stable production domain. `BUYER_PRIVATE_KEY` required in Vercel for server-side demo buys.
 - **Agent reasoning:** Plain TypeScript decision functions (thin, legible — scores higher than a heavyweight framework doing simple math). The starter's LangChain.js buyer can be extended *only if* LLM-driven endpoint selection is wanted later; no separate agent SDK.
 
@@ -147,7 +147,7 @@ Real-time view of money moving. Counters proven to resonate in this ecosystem: *
 ## 8. Success Metrics
 
 - **Must-have (existence):** Deployed payable URL with one settled testnet payment (day 3). **Met.**
-- **Core (partial):** ~~Working discrete x402 endpoints~~ · ~~dynamic pricing with logged reasons~~ · ~~Scout buy/decline~~ · ~~demo path (`/try`)~~ · **working per-second stream** (not started).
+- **Core (partial):** ~~Working discrete x402 endpoints~~ · ~~dynamic pricing with logged reasons~~ · ~~Scout buy/decline~~ · ~~demo path (`/try`)~~ · ~~working per-second stream (loop + meter)~~ · **days 9–10 stream hardening** (not started).
 - **Traction (30% — report honestly):** Report **demo buys** and **Scout payments** separately. Distinct paying clients = Scout payer addresses only. Target: beat ~19-payer / sub-dollar prior-comparable bar for real funded payers; demo buys are engagement, not distinct payers.
 - **Demo:** <3-min video leading with the stream and the two-agent settlement; README a judge can follow unattended.
 

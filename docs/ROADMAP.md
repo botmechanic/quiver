@@ -2,8 +2,8 @@
 
 > Companion to `docs/PRD.md`. The PRD is the **what & why**; this is the **what's-done & what's-next** schedule.
 > **Event:** Lepton Agents Hackathon (Canteen × Circle) · June 15–29, 2026 · Final submission before **June 29**.
-> **Headline still to build:** true pay-per-second streaming over x402 on Arc.
-> **Last updated:** June 17, 2026 — update the status column when something ships or deploys.
+> **Headline:** true pay-per-second streaming over x402 on Arc — **loop + dashboard meter shipped (Jun 18)**; hardening + polish remain.
+> **Last updated:** June 18, 2026 — update the status column when something ships or deploys.
 
 ---
 
@@ -15,8 +15,9 @@
 | 2–3 | Reskin to Archer endpoints, thin strategy core, hashed trace, **deployed payable v0** | ✅ Done & live |
 | 4–6a | Dynamic pricing (compute + confidence) + Scout decline logic | ✅ Done & live |
 | 4–6b | Honest human demo-buy path (`/try`) | ✅ Done & live |
-| — | **Release `/try` + start traction outreach** | ⏳ **NEXT ACTION** |
-| 7–10 | **Pay-per-second streaming (headline)** + parallel traction | ⬜ Not started |
+| — | **Release `/try` + start traction outreach** | ⏳ In progress |
+| 7–8 | **Pay-per-second streaming — loop + dashboard meter** | ✅ Done (local verified; deploy pending) |
+| 9–10 | Stream adversarial hardening (failed tick, out-of-balance, clean close) | ⬜ Not started |
 | 11–12 | Two-sided Archer↔Scout loop + dashboard polish + optional upside | ⬜ Not started |
 | 13–14 | Demo video, README/submission polish, final submit | ⬜ Not started |
 
@@ -53,13 +54,13 @@ The one axis no prior-cohort winner occupied. Highest variance — protect this 
 - 1-second tick. Sub-500ms Gateway verification fits inside the tick.
 - Surface **authorized/verified** volume live, not settled (settlement batches lag).
 
-**Open question to resolve first (day 7, before building the loop):**
-- [ ] Confirm Circle Gateway accepts many overlapping long-validity authorizations from one buyer in rapid succession. This is the load-bearing unknown — test it in isolation before building the meter on top of it.
+**Open question (resolved Jun 18):**
+- [x] Confirm Circle Gateway accepts many overlapping long-validity authorizations from one buyer in rapid succession — **GREEN** (`npm run spike:overlapping-auth`).
 
-**Build sequence (so a slip never costs the feature, only its polish):**
-- [ ] **Day 7:** one stream session paying real per-second ticks against Archer, landing in a `stream_events` table. Ugly is fine — the loop working is the milestone.
-- [ ] **Day 8:** wire the dashboard streaming meter via Supabase real-time (same channel as payments — do **not** hand-roll websockets). Implement **tap-to-stop** with the visible invariant: *cost = seconds consumed × rate, never more*.
-- [ ] **Days 9–10:** harden edges — failed tick mid-stream, buyer out of balance, clean session close. **This is the adversarial-robustness story** the prior cohort rewarded — make "the meter provably can't over-charge" visible in the demo, not just true in code.
+**Build sequence:**
+- [x] **Day 7:** one stream session paying real per-second ticks against Archer, landing in `stream_events`.
+- [x] **Day 8:** dashboard streaming meter via Supabase real-time; **tap-to-stop** with visible invariant (*cost = ticks × rate*).
+- [ ] **Days 9–10:** harden edges — failed tick mid-stream, buyer out of balance, clean session close. Make "the meter provably can't over-charge" visible in the demo.
 
 **In parallel, all four days — traction:**
 - [ ] Keep driving demo buys / Scout activity. Track: distinct paying clients, total payments, total USDC volume, avg transaction size (sub-cent). Streaming and traction are independent — a bad day on one never blocks the other.

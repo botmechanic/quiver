@@ -55,6 +55,7 @@ import { shortenHash } from "@/lib/utils";
 import { usePaymentEvents } from "@/hooks/use-transactions";
 import { useWithdrawals } from "@/hooks/use-withdrawals";
 import { PaymentMetrics } from "@/components/dashboard/payment-metrics";
+import { StreamMeterPanel } from "@/components/dashboard/stream-meter-panel";
 import { TryQuiverPanel } from "@/components/try-quiver-panel";
 import { getPaymentSource } from "@/lib/payments";
 
@@ -253,6 +254,10 @@ export default function Dashboard() {
       <PaymentMetrics events={events} />
 
       <div className="mb-8">
+        <StreamMeterPanel />
+      </div>
+
+      <div className="mb-8">
         <TryQuiverPanel />
       </div>
 
@@ -388,12 +393,16 @@ export default function Dashboard() {
                           variant={
                             getPaymentSource(ev) === "demo"
                               ? "outline"
-                              : "secondary"
+                              : getPaymentSource(ev) === "stream"
+                                ? "default"
+                                : "secondary"
                           }
                           className={
                             getPaymentSource(ev) === "demo"
                               ? "border-[#D4AF37] text-[#7A5C1E]"
-                              : undefined
+                              : getPaymentSource(ev) === "stream"
+                                ? "bg-[#3FB950]/20 text-[#3FB950] border-[#3FB950]/40"
+                                : undefined
                           }
                         >
                           {getPaymentSource(ev)}

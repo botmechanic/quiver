@@ -1,6 +1,6 @@
 import type { ArcherTrace } from "./strategy";
 
-export type ArcherEndpoint = "market-state" | "signal" | "compute";
+export type ArcherEndpoint = "market-state" | "signal" | "compute" | "stream";
 
 export interface PriceQuote {
   /** Dollar string for x402, e.g. "$0.0014" */
@@ -16,18 +16,21 @@ const BASE_USDC: Record<ArcherEndpoint, number> = {
   "market-state": 0.0001,
   signal: 0.001,
   compute: 0.003,
+  stream: 0.0001,
 };
 
 const FLOOR_USDC: Record<ArcherEndpoint, number> = {
   "market-state": 0.00005,
   signal: 0.0005,
   compute: 0.001,
+  stream: 0.0001,
 };
 
 const CEILING_USDC: Record<ArcherEndpoint, number> = {
   "market-state": 0.0003,
   signal: 0.003,
   compute: 0.01,
+  stream: 0.0001,
 };
 
 const roundPrice = (value: number) => Number(value.toFixed(6));
@@ -71,6 +74,16 @@ function buildQuote(
 export function quoteMarketState(trace: ArcherTrace): PriceQuote {
   const base = BASE_USDC["market-state"];
   return buildQuote("market-state", trace, [`base ${formatUsdc(base)} (cheap lookup)`], base);
+}
+
+export function quoteStream(trace: ArcherTrace): PriceQuote {
+  const usdc = BASE_USDC.stream;
+  return buildQuote(
+    "stream",
+    trace,
+    [`base ${formatUsdc(usdc)} (per-second live decision feed tick)`],
+    usdc,
+  );
 }
 
 export function quoteSignal(trace: ArcherTrace): PriceQuote {

@@ -30,5 +30,11 @@
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts"
   ],
-  "exclude": ["node_modules"]
+  "exclude": [
+    "node_modules",
+    "lib/scout/stream.ts",
+    "stream.mts",
+    "agent.mts",
+    "scripts/**"
+  ]
 }

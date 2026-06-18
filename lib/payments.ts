@@ -1,9 +1,12 @@
-export type PaymentSource = "demo" | "scout";
+export type PaymentSource = "demo" | "scout" | "stream";
 
 export function getPaymentSource(event: {
   raw: Record<string, unknown> | null;
 }): PaymentSource {
-  return event.raw?.source === "demo" ? "demo" : "scout";
+  const source = event.raw?.source;
+  if (source === "demo") return "demo";
+  if (source === "stream") return "stream";
+  return "scout";
 }
 
 export function formatUsdcTotal(events: { amount_usdc: string }[]): string {

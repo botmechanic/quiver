@@ -180,7 +180,7 @@ async function initDemoSession(): Promise<DemoSession> {
   return session;
 }
 
-async function getDemoSession(): Promise<DemoSession> {
+export async function getDemoSession(): Promise<DemoSession> {
   if (!sessionPromise) {
     sessionPromise = initDemoSession().catch((err) => {
       sessionPromise = null;
@@ -190,7 +190,7 @@ async function getDemoSession(): Promise<DemoSession> {
   return sessionPromise;
 }
 
-async function ensureGatewayBalance(session: DemoSession) {
+export async function ensureGatewayBalance(session: DemoSession) {
   const balances = await session.gateway.getBalances();
   if (balances.gateway.available >= REDEPOSIT_THRESHOLD) return;
 
