@@ -5,6 +5,8 @@ import {
   getStreamRateUsdc,
 } from "@/lib/demo/stream-session";
 
+export const maxDuration = 60;
+
 export async function POST(req: NextRequest) {
   const ip = getClientIp(req);
   const rateLimit = checkDemoRateLimit(ip);
@@ -25,7 +27,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const session = createDemoStreamSession(ip);
+  const session = await createDemoStreamSession(ip);
 
   return NextResponse.json({
     demo: true,

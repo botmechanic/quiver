@@ -1,30 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
 import { getClientIp } from "@/lib/demo/rate-limit";
 import {
   expectedStreamTotal,
-  getDemoStreamSession,
   getStreamRateUsdc,
+  resolveDemoStreamSession,
   stopDemoStreamSession,
 } from "@/lib/demo/stream-session";
+import { verifiedStreamTickCount } from "@/lib/demo/stream-session-store";
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-);
-
-async function verifiedTickCount(sessionId: string): Promise<number> {
-  const { data, error } = await supabase
-    .from("stream_events")
-    .select("tick_number")
-    .eq("session_id", sessionId)
-    .eq("status", "verified")
-    .order("tick_number", { ascending: false })
-    .limit(1);
-
-  if (error || !data?.length) return 0;
-  return data[0].tick_number;
-}
+export const maxDuration = 60;
 
 export async function POST(req: NextRequest) {
   const ip = getClientIp(req);
@@ -50,25 +34,18 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const existing = getDemoStreamSession(sessionId);
-  if (!existing) {
-    return NextResponse.json(
-      { error: "Unknown stream session" },
-      { status: 404 },
-    );
-  }
-
-  if (existing.ip !== ip) {
+  const existing = await resolveDemoStreamSession(sessionId);
+  if (existing && existing.ip !== ip) {
     return NextResponse.json(
       { error: "Session IP mismatch" },
       { status: 403 },
     );
   }
 
-  const session = stopDemoStreamSession(sessionId)!;
+  const session = existing ? await stopDemoStreamSession(sessionId) : null;
   const rateUsdc = getStreamRateUsdc();
-  const dbTicks = await verifiedTickCount(sessionId);
-  const tickCount = Math.max(session.tickCount, dbTicks);
+  const dbTicks = await verifiedStreamTickCount(sessionId);
+  const tickCount = Math.max(session?.tickCount ?? 0, dbTicks);
   const totalUsdc = expectedStreamTotal(tickCount);
 
   const labels: Record<string, string> = {

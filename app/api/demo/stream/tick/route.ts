@@ -8,11 +8,16 @@ import {
   advanceStreamTick,
   expectedStreamTotal,
   failDemoStreamSession,
-  getDemoStreamSession,
+  resolveDemoStreamSession,
   validateStreamTick,
 } from "@/lib/demo/stream-session";
-import { STREAM_TICK_SERVER_TIMEOUT_MS, tickTimeoutMs } from "@/lib/stream/constants";
+import {
+  STREAM_TICK_SERVER_TIMEOUT_MS,
+  tickTimeoutMs,
+} from "@/lib/stream/constants";
 import { withServerTimeout } from "@/lib/stream/fetch-with-timeout";
+
+export const maxDuration = 60;
 
 export async function POST(req: NextRequest) {
   const ip = getClientIp(req);
@@ -39,7 +44,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const session = getDemoStreamSession(sessionId);
+  const session = await resolveDemoStreamSession(sessionId);
   if (!session) {
     return NextResponse.json(
       { error: "Unknown stream session" },
@@ -82,7 +87,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    advanceStreamTick(session);
+    await advanceStreamTick(session);
 
     const cumulativeUsdc = expectedStreamTotal(session.tickCount);
 
@@ -110,7 +115,7 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.error("[demo/stream/tick] Failed:", message);
-    failDemoStreamSession(sessionId, message);
+    await failDemoStreamSession(sessionId, message);
     const isTimeout = message.includes("timed out");
     return NextResponse.json(
       {

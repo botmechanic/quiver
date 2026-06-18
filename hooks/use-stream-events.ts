@@ -20,26 +20,28 @@ export type StreamEvent = {
 
 export function useStreamEvents(sessionId: string | null) {
   const [events, setEvents] = useState<StreamEvent[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const channelRef = useRef<RealtimeChannel | null>(null);
 
   useEffect(() => {
+    if (!sessionId) {
+      setEvents([]);
+      setLoading(false);
+      return;
+    }
+
     setEvents([]);
     setLoading(true);
 
     const supabase = createClient();
 
     async function fetchInitial() {
-      let query = supabase
+      const { data, error } = await supabase
         .from("stream_events")
         .select("*")
-        .order("created_at", { ascending: true });
-
-      if (sessionId) {
-        query = query.eq("session_id", sessionId);
-      }
-
-      const { data, error } = await query.limit(sessionId ? 500 : 50);
+        .eq("session_id", sessionId)
+        .order("created_at", { ascending: true })
+        .limit(500);
 
       if (error) {
         console.error("Failed to fetch stream events:", error.message);
@@ -51,13 +53,17 @@ export function useStreamEvents(sessionId: string | null) {
     }
 
     const channel = supabase
-      .channel(`stream-events-${sessionId ?? "all"}`)
+      .channel(`stream-events-${sessionId}`)
       .on(
         "postgres_changes",
-        { event: "INSERT", schema: "public", table: "stream_events" },
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "stream_events",
+          filter: `session_id=eq.${sessionId}`,
+        },
         (payload) => {
           const row = payload.new as StreamEvent;
-          if (sessionId && row.session_id !== sessionId) return;
           setEvents((prev) =>
             dedupeStreamEvents([
               ...prev.filter((e) => e.id !== row.id),

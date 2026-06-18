@@ -1,4 +1,8 @@
 import { randomUUID } from "node:crypto";
+import {
+  loadStreamSession,
+  persistStreamSession,
+} from "@/lib/demo/stream-session-store";
 
 const MAX_TICKS_PER_SESSION = Number(process.env.STREAM_MAX_TICKS ?? "120");
 const MAX_SESSION_MS = Number(process.env.STREAM_MAX_DURATION_MS ?? "300000");
@@ -13,7 +17,14 @@ export interface DemoStreamSession {
 
 const sessions = new Map<string, DemoStreamSession>();
 
-export function createDemoStreamSession(ip: string): DemoStreamSession {
+function cacheSession(session: DemoStreamSession): DemoStreamSession {
+  sessions.set(session.id, session);
+  return session;
+}
+
+export async function createDemoStreamSession(
+  ip: string,
+): Promise<DemoStreamSession> {
   const session: DemoStreamSession = {
     id: randomUUID(),
     ip,
@@ -21,29 +32,41 @@ export function createDemoStreamSession(ip: string): DemoStreamSession {
     tickCount: 0,
     stopped: false,
   };
-  sessions.set(session.id, session);
+  cacheSession(session);
+  await persistStreamSession(session);
   return session;
 }
 
-export function getDemoStreamSession(sessionId: string): DemoStreamSession | null {
-  return sessions.get(sessionId) ?? null;
+export async function resolveDemoStreamSession(
+  sessionId: string,
+): Promise<DemoStreamSession | null> {
+  const cached = sessions.get(sessionId);
+  if (cached) return cached;
+
+  const loaded = await loadStreamSession(sessionId);
+  if (!loaded) return null;
+  return cacheSession(loaded);
 }
 
-export function stopDemoStreamSession(sessionId: string): DemoStreamSession | null {
-  const session = sessions.get(sessionId);
+export async function stopDemoStreamSession(
+  sessionId: string,
+): Promise<DemoStreamSession | null> {
+  const session = await resolveDemoStreamSession(sessionId);
   if (!session) return null;
   session.stopped = true;
+  await persistStreamSession(session);
   return session;
 }
 
-export function failDemoStreamSession(
+export async function failDemoStreamSession(
   sessionId: string,
   reason: string,
-): DemoStreamSession | null {
-  const session = sessions.get(sessionId);
+): Promise<DemoStreamSession | null> {
+  const session = await resolveDemoStreamSession(sessionId);
   if (!session) return null;
   session.stopped = true;
   console.log(`[demo/stream] Session ${sessionId} closed: ${reason}`);
+  await persistStreamSession(session);
   return session;
 }
 
@@ -75,8 +98,11 @@ export function validateStreamTick(
   return { ok: true };
 }
 
-export function advanceStreamTick(session: DemoStreamSession): void {
+export async function advanceStreamTick(
+  session: DemoStreamSession,
+): Promise<void> {
   session.tickCount += 1;
+  await persistStreamSession(session);
 }
 
 export function getStreamRateUsdc(): string {
