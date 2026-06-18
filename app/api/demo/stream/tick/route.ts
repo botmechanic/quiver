@@ -11,7 +11,7 @@ import {
   getDemoStreamSession,
   validateStreamTick,
 } from "@/lib/demo/stream-session";
-import { STREAM_TICK_SERVER_TIMEOUT_MS } from "@/lib/stream/constants";
+import { STREAM_TICK_SERVER_TIMEOUT_MS, tickTimeoutMs } from "@/lib/stream/constants";
 import { withServerTimeout } from "@/lib/stream/fetch-with-timeout";
 
 export async function POST(req: NextRequest) {
@@ -62,7 +62,7 @@ export async function POST(req: NextRequest) {
     const started = Date.now();
     const payment = await withServerTimeout(
       executeDemoStreamTick(sessionId, tick!, targetUrl),
-      STREAM_TICK_SERVER_TIMEOUT_MS,
+      Math.max(STREAM_TICK_SERVER_TIMEOUT_MS, tickTimeoutMs(tick!) + 5000),
       "Stream tick",
     );
 

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { dedupeStreamEvents } from "@/lib/stream/constants";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 
 export type StreamEvent = {
@@ -23,6 +24,9 @@ export function useStreamEvents(sessionId: string | null) {
   const channelRef = useRef<RealtimeChannel | null>(null);
 
   useEffect(() => {
+    setEvents([]);
+    setLoading(true);
+
     const supabase = createClient();
 
     async function fetchInitial() {
@@ -41,15 +45,7 @@ export function useStreamEvents(sessionId: string | null) {
         console.error("Failed to fetch stream events:", error.message);
         setEvents([]);
       } else {
-        setEvents((prev) => {
-          const fetched = data as StreamEvent[];
-          if (prev.length === 0) return fetched;
-          const ids = new Set(fetched.map((e) => e.id));
-          const extra = prev.filter((e) => !ids.has(e.id));
-          return [...extra, ...fetched].sort(
-            (a, b) => a.tick_number - b.tick_number,
-          );
-        });
+        setEvents(dedupeStreamEvents(data as StreamEvent[]));
       }
       setLoading(false);
     }
@@ -62,12 +58,12 @@ export function useStreamEvents(sessionId: string | null) {
         (payload) => {
           const row = payload.new as StreamEvent;
           if (sessionId && row.session_id !== sessionId) return;
-          setEvents((prev) => {
-            if (prev.some((e) => e.id === row.id)) return prev;
-            return [...prev, row].sort(
-              (a, b) => a.tick_number - b.tick_number,
-            );
-          });
+          setEvents((prev) =>
+            dedupeStreamEvents([
+              ...prev.filter((e) => e.id !== row.id),
+              row,
+            ]),
+          );
         },
       )
       .subscribe((status) => {

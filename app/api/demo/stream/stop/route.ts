@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
 import { getClientIp } from "@/lib/demo/rate-limit";
 import {
   expectedStreamTotal,
@@ -6,6 +7,24 @@ import {
   getStreamRateUsdc,
   stopDemoStreamSession,
 } from "@/lib/demo/stream-session";
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+);
+
+async function verifiedTickCount(sessionId: string): Promise<number> {
+  const { data, error } = await supabase
+    .from("stream_events")
+    .select("tick_number")
+    .eq("session_id", sessionId)
+    .eq("status", "verified")
+    .order("tick_number", { ascending: false })
+    .limit(1);
+
+  if (error || !data?.length) return 0;
+  return data[0].tick_number;
+}
 
 export async function POST(req: NextRequest) {
   const ip = getClientIp(req);
@@ -48,7 +67,9 @@ export async function POST(req: NextRequest) {
 
   const session = stopDemoStreamSession(sessionId)!;
   const rateUsdc = getStreamRateUsdc();
-  const totalUsdc = expectedStreamTotal(session.tickCount);
+  const dbTicks = await verifiedTickCount(sessionId);
+  const tickCount = Math.max(session.tickCount, dbTicks);
+  const totalUsdc = expectedStreamTotal(tickCount);
 
   const labels: Record<string, string> = {
     tick_timeout:
@@ -64,12 +85,12 @@ export async function POST(req: NextRequest) {
     session_id: sessionId,
     stopped: true,
     reason: reason ?? "user",
-    tick_count: session.tickCount,
+    tick_count: tickCount,
     rate_usdc: rateUsdc,
     authorized_total_usdc: totalUsdc,
     invariant: {
-      formula: `${session.tickCount} × ${rateUsdc} = ${totalUsdc}`,
-      holds: totalUsdc === expectedStreamTotal(session.tickCount),
+      formula: `${tickCount} × ${rateUsdc} = ${totalUsdc}`,
+      holds: totalUsdc === expectedStreamTotal(tickCount),
     },
     label: labels[reason ?? "user"] ?? labels.user,
     fail_closed: reason === "tick_timeout" || reason === "tick_failed",

@@ -7,8 +7,10 @@ import { Loader2, Square } from "lucide-react";
 import { useStreamEvents } from "@/hooks/use-stream-events";
 import {
   STREAM_RATE_USDC,
+  STREAM_FIRST_TICK_TIMEOUT_MS,
   STREAM_TICK_TIMEOUT_MS,
   buildStreamInvariant,
+  tickTimeoutMs,
 } from "@/lib/stream/constants";
 import {
   FetchTimeoutError,
@@ -59,6 +61,7 @@ export function StreamMeterPanel() {
   const [failClosed, setFailClosed] = useState(false);
 
   const tickRef = useRef(0);
+  const dbTickRef = useRef(0);
   const durationRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const stoppingRef = useRef(false);
   const runningRef = useRef(false);
@@ -66,9 +69,15 @@ export function StreamMeterPanel() {
   const { events, loading, cumulativeUsdc, tickCount } =
     useStreamEvents(sessionId);
 
-  const verifiedTicks = sessionId ? tickCount || localTicks : 0;
+  useEffect(() => {
+    dbTickRef.current = tickCount;
+  }, [tickCount]);
+
+  const verifiedTicks = sessionId
+    ? Math.max(tickCount, localTicks, tickRef.current)
+    : 0;
   const authorizedTotal = sessionId
-    ? parseFloat(cumulativeUsdc || "0")
+    ? Math.max(parseFloat(cumulativeUsdc || "0"), localTicks * STREAM_RATE_USDC)
     : 0;
   const expectedTotal = Number((verifiedTicks * STREAM_RATE_USDC).toFixed(6));
   const invariantHolds =
@@ -102,11 +111,15 @@ export function StreamMeterPanel() {
   }, [clearTimers]);
 
   const buildLocalStopSummary = useCallback(
-    (verifiedTicks: number, reason: CloseReason): StreamStopResponse => {
-      const built = buildStreamInvariant(verifiedTicks);
+    (verifiedTickCount: number, reason: CloseReason): StreamStopResponse => {
+      const built = buildStreamInvariant(verifiedTickCount);
+      const timeoutLabel =
+        reason === "tick_timeout"
+          ? `Tick timed out — stream closed. No further authorizations signed; charged only for ${verifiedTickCount} verified tick(s).`
+          : `Tick failed — stream closed. No further authorizations signed; charged only for ${verifiedTickCount} verified tick(s).`;
       const labels: Record<CloseReason, string> = {
-        tick_timeout: `Tick timed out after ${STREAM_TICK_TIMEOUT_MS / 1000}s — stream closed. No further authorizations signed; charged only for ${verifiedTicks} verified tick(s).`,
-        tick_failed: `Tick failed — stream closed. No further authorizations signed; charged only for ${verifiedTicks} verified tick(s).`,
+        tick_timeout: timeoutLabel,
+        tick_failed: timeoutLabel.replace("timed out", "failed"),
         user: "Stream stopped — no further authorizations will be signed for this session.",
       };
       return {
@@ -122,12 +135,22 @@ export function StreamMeterPanel() {
     [],
   );
 
+  const resolvedVerifiedTicks = useCallback(() => {
+    return Math.max(tickRef.current, dbTickRef.current, localTicks);
+  }, [localTicks]);
+
   const closeSession = useCallback(
     async (sid: string, reason: CloseReason, detail?: string) => {
       if (stoppingRef.current && reason === "user") return;
       haltLoop();
 
-      const verifiedTicks = tickRef.current;
+      // In-flight tick may still land in stream_events after client abort.
+      await new Promise((r) => setTimeout(r, 750));
+
+      const verifiedTickCount = Math.max(
+        tickRef.current,
+        dbTickRef.current,
+      );
       setFailClosed(reason !== "user");
 
       try {
@@ -145,21 +168,30 @@ export function StreamMeterPanel() {
           error?: string;
           message?: string;
         };
+        const reconciled = Math.max(verifiedTickCount, data.tick_count ?? 0);
         if (res.ok) {
-          setStopSummary(data);
+          setStopSummary({
+            ...data,
+            ...buildStreamInvariant(reconciled),
+            label: data.label,
+            reason: data.reason,
+            fail_closed: data.fail_closed,
+          });
           setError(null);
         } else {
-          setStopSummary(buildLocalStopSummary(verifiedTicks, reason));
+          setStopSummary(buildLocalStopSummary(reconciled, reason));
           setError(data.message ?? data.error ?? detail ?? "Stop failed");
         }
       } catch {
-        setStopSummary(buildLocalStopSummary(verifiedTicks, reason));
+        setStopSummary(
+          buildLocalStopSummary(resolvedVerifiedTicks(), reason),
+        );
         if (detail) setError(detail);
       } finally {
         stoppingRef.current = false;
       }
     },
-    [haltLoop, buildLocalStopSummary],
+    [haltLoop, buildLocalStopSummary, resolvedVerifiedTicks],
   );
 
   const stopStream = useCallback(async () => {
@@ -176,6 +208,7 @@ export function StreamMeterPanel() {
       setPendingTickNumber(nextTick);
 
       try {
+        const timeoutMs = tickTimeoutMs(nextTick);
         const res = await fetchWithTimeout(
           "/api/demo/stream/tick",
           {
@@ -183,7 +216,7 @@ export function StreamMeterPanel() {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ session_id: sid, tick: nextTick }),
           },
-          STREAM_TICK_TIMEOUT_MS,
+          timeoutMs,
           `Tick ${nextTick}`,
         );
         const data = await res.json();
@@ -278,13 +311,20 @@ export function StreamMeterPanel() {
     return () => clearTimers();
   }, [clearTimers]);
 
-  const displayTicks = stopSummary?.tick_count ?? verifiedTicks;
-  const displayTotal = stopSummary
-    ? parseFloat(stopSummary.authorized_total_usdc)
-    : authorizedTotal;
+  const displayTicks = Math.max(
+    verifiedTicks,
+    stopSummary?.tick_count ?? 0,
+  );
+  const displayTotal = Math.max(
+    authorizedTotal,
+    parseFloat(stopSummary?.authorized_total_usdc ?? "0"),
+  );
   const displayExpected = Number(
     (displayTicks * STREAM_RATE_USDC).toFixed(6),
   );
+  const displayInvariantHolds =
+    displayTicks === 0 ||
+    Math.abs(displayTotal - displayExpected) < 0.000001;
   const showInvariant =
     stopSummary !== null || (!running && displayTicks > 0);
 
@@ -332,7 +372,7 @@ export function StreamMeterPanel() {
           <p className="mt-1 text-xs text-[#EDE6D6]/50">
             {displayTicks} tick{displayTicks !== 1 ? "s" : ""}
             {pendingTick && pendingTickNumber !== null
-              ? ` · signing tick ${pendingTickNumber}… (max ${STREAM_TICK_TIMEOUT_MS / 1000}s)`
+              ? ` · signing tick ${pendingTickNumber}… (max ${tickTimeoutMs(pendingTickNumber) / 1000}s)`
               : ""}
           </p>
         </div>
@@ -354,7 +394,7 @@ export function StreamMeterPanel() {
           className={`mb-4 rounded-lg border px-4 py-3 text-sm ${
             failClosed
               ? "border-[#D4AF37]/50 bg-[#D4AF37]/10 text-[#E8C766]"
-              : invariantHolds && stopSummary?.invariant.holds !== false
+              : displayInvariantHolds && stopSummary?.invariant.holds !== false
                 ? "border-[#3FB950]/50 bg-[#3FB950]/10 text-[#3FB950]"
                 : "border-red-500/50 bg-red-950/30 text-red-200"
           }`}
@@ -365,7 +405,7 @@ export function StreamMeterPanel() {
           <p className="mt-1 font-mono text-xs">
             {displayTicks} × ${STREAM_RATE_USDC.toFixed(4)} = $
             {displayExpected.toFixed(6)}
-            {invariantHolds ? " ✓" : " ✗ drift"}
+            {displayInvariantHolds ? " ✓" : " ✗ drift"}
           </p>
           {stopSummary && (
             <p className="mt-2 text-xs opacity-90">{stopSummary.label}</p>
