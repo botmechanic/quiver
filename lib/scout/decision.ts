@@ -21,28 +21,32 @@ export function evaluatePurchase(input: ScoutPurchaseInput): ScoutDecision {
   if (confidence < threshold) {
     return {
       action: "decline",
-      reason: `confidence ${confidence.toFixed(2)} below ${threshold.toFixed(2)} threshold`,
+      reason: `Confidence too low (${confidence.toFixed(2)}) to justify this quote — Scout policy requires ≥ ${threshold.toFixed(2)}`,
     };
   }
+
+  const maxWilling =
+    Number.isFinite(remainingBudget) ? confidence * remainingBudget : null;
 
   if (priceUsdc > remainingBudget) {
     return {
       action: "decline",
-      reason: `price ${priceUsdc.toFixed(6)} USDC exceeds remaining budget ${remainingBudget.toFixed(6)} USDC`,
+      reason: `Quoted price $${priceUsdc.toFixed(6)} exceeds remaining budget $${remainingBudget.toFixed(6)} USDC`,
     };
   }
 
-  const maxWilling = confidence * remainingBudget;
-  if (priceUsdc > maxWilling) {
+  if (maxWilling !== null && priceUsdc > maxWilling) {
     return {
       action: "decline",
-      reason: `price ${priceUsdc.toFixed(6)} USDC above max ${maxWilling.toFixed(6)} (confidence ${confidence.toFixed(2)} × budget ${remainingBudget.toFixed(6)} remaining)`,
+      reason: `Price $${priceUsdc.toFixed(6)} above max willing $${maxWilling.toFixed(6)} (confidence × remaining budget)`,
     };
   }
 
   return {
     action: "buy",
-    reason: `confidence ${confidence.toFixed(2)} ≥ ${threshold.toFixed(2)}, price ${priceUsdc.toFixed(6)} ≤ max ${maxWilling.toFixed(6)}`,
+    reason: maxWilling !== null
+      ? `Worth it at $${priceUsdc.toFixed(6)} — confidence ${confidence.toFixed(2)} supports up to $${maxWilling.toFixed(6)} of remaining budget`
+      : `Worth it at $${priceUsdc.toFixed(6)} — confidence ${confidence.toFixed(2)} meets Scout policy (≥ ${threshold.toFixed(2)})`,
   };
 }
 

@@ -18,7 +18,7 @@
 | — | **Release `/try` + start traction outreach** | ⏳ In progress |
 | 7–8 | **Pay-per-second streaming — loop + dashboard meter** | ✅ Done (local verified; deploy pending) |
 | 9–10 | Stream adversarial hardening (failed tick, out-of-balance, clean close) | ⏳ Partial — hung-tick + reconciliation shipped; out-of-balance + abandoned session deferred |
-| 11–12 | Two-sided Archer↔Scout loop + dashboard polish + optional upside | ⬜ Not started |
+| 11–12 | Two-sided Archer↔Scout loop + dashboard polish + optional upside | ⏳ Day 11 nearly closed — both policy gates verified; prod deployed |
 | 13–14 | Demo video, README/submission polish, final submit | ⬜ Not started |
 
 Legend: ✅ done · ⏳ in flight / pending · ⬜ not started
@@ -78,6 +78,10 @@ The one axis no prior-cohort winner occupied. Highest variance — protect this 
 **Primary:** wire the full **Archer↔Scout** loop (scored agentic 30% — do not let streaming edge cases pull focus here).
 
 - [ ] Wire the full **Archer↔Scout** loop: one instance sells, one buys on a budget, settling sub-cent on Arc with no human in the loop. (Vehicle for the demo's "two agents settle a fraction of a cent in <0.5s" moment.)
+- [x] **Scout decisions on dashboard:** `scout_decisions` table (separate from `payment_events`); agent persists every buy/decline; dashboard panel with realtime feed + policy-style reason strings.
+- [x] Apply `20260318110000` + `20260318110001` migrations; confidence + budget declines verified on panel.
+- [x] **Confidence gate fix:** Archer trace no longer floors confidence at 0.45 (`abs(score)` artifact); Scout confidence declines verified end-to-end.
+- [x] Deploy dashboard + strategy fix to `quiver-self.vercel.app`.
 - [ ] Dashboard polish: live money-flow + streaming meter reading cleanly together; demo/scout split legible to a stranger.
 - [ ] **Optional upside — only if streaming + traction are already solid:**
   - [ ] Onchain anchoring of the reasoning-trace hash (beyond the simple recomputable hash).

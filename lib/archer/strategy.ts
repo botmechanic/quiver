@@ -79,7 +79,12 @@ function generateArcherTraceFromSeed(
   const liquidity = round(Math.abs(seededWave(seed, 1.7)));
   const volatility = round(Math.abs(seededWave(seed, 3.1)));
   const score = round(momentum * 0.55 + liquidity * 0.25 - volatility * 0.2);
-  const confidence = round(Math.min(0.95, 0.45 + Math.abs(score) * 0.9), 3);
+  // Signed score + volatility: weak/noisy edges can fall below Scout's 0.45 threshold.
+  // (The prior abs(score) floor kept confidence ≥ 0.45 always — the confidence gate never fired.)
+  const confidence = round(
+    Math.min(0.95, Math.max(0.25, 0.5 + score * 0.55 - volatility * 0.25)),
+    3,
+  );
 
   return {
     agent: "Archer",

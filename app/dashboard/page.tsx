@@ -56,6 +56,7 @@ import { usePaymentEvents } from "@/hooks/use-transactions";
 import { useWithdrawals } from "@/hooks/use-withdrawals";
 import { PaymentMetrics } from "@/components/dashboard/payment-metrics";
 import { StreamMeterPanel } from "@/components/dashboard/stream-meter-panel";
+import { ScoutDecisionsPanel } from "@/components/dashboard/scout-decisions-panel";
 import { TryQuiverPanel } from "@/components/try-quiver-panel";
 import { getPaymentSource } from "@/lib/payments";
 
@@ -255,6 +256,10 @@ export default function Dashboard() {
 
       <div className="mb-8">
         <StreamMeterPanel />
+      </div>
+
+      <div className="mb-8">
+        <ScoutDecisionsPanel />
       </div>
 
       <div className="mb-8">
