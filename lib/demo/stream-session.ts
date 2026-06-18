@@ -36,6 +36,17 @@ export function stopDemoStreamSession(sessionId: string): DemoStreamSession | nu
   return session;
 }
 
+export function failDemoStreamSession(
+  sessionId: string,
+  reason: string,
+): DemoStreamSession | null {
+  const session = sessions.get(sessionId);
+  if (!session) return null;
+  session.stopped = true;
+  console.log(`[demo/stream] Session ${sessionId} closed: ${reason}`);
+  return session;
+}
+
 export function validateStreamTick(
   session: DemoStreamSession,
   ip: string,

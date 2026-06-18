@@ -7,9 +7,12 @@ import { getClientIp } from "@/lib/demo/rate-limit";
 import {
   advanceStreamTick,
   expectedStreamTotal,
+  failDemoStreamSession,
   getDemoStreamSession,
   validateStreamTick,
 } from "@/lib/demo/stream-session";
+import { STREAM_TICK_SERVER_TIMEOUT_MS } from "@/lib/stream/constants";
+import { withServerTimeout } from "@/lib/stream/fetch-with-timeout";
 
 export async function POST(req: NextRequest) {
   const ip = getClientIp(req);
@@ -57,7 +60,28 @@ export async function POST(req: NextRequest) {
 
   try {
     const started = Date.now();
-    const payment = await executeDemoStreamTick(sessionId, tick!, targetUrl);
+    const payment = await withServerTimeout(
+      executeDemoStreamTick(sessionId, tick!, targetUrl),
+      STREAM_TICK_SERVER_TIMEOUT_MS,
+      "Stream tick",
+    );
+
+    if (session.stopped) {
+      return NextResponse.json(
+        {
+          error: "Stream session closed",
+          message:
+            "Tick completed after the session was stopped — no further ticks will be accepted.",
+          settlement: {
+            amount_usdc: payment.amount,
+            payer: payment.payer,
+            elapsed_ms: payment.elapsedMs,
+          },
+        },
+        { status: 409 },
+      );
+    }
+
     advanceStreamTick(session);
 
     const cumulativeUsdc = expectedStreamTotal(session.tickCount);
@@ -86,10 +110,17 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.error("[demo/stream/tick] Failed:", message);
-    session.stopped = true;
+    failDemoStreamSession(sessionId, message);
+    const isTimeout = message.includes("timed out");
     return NextResponse.json(
-      { error: "Stream tick failed", message },
-      { status: 500 },
+      {
+        error: isTimeout ? "Stream tick timed out" : "Stream tick failed",
+        message,
+        fail_closed: true,
+        verified_ticks: session.tickCount,
+        authorized_total_usdc: expectedStreamTotal(session.tickCount),
+      },
+      { status: isTimeout ? 504 : 500 },
     );
   }
 }

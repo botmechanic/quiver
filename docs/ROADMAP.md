@@ -60,7 +60,8 @@ The one axis no prior-cohort winner occupied. Highest variance — protect this 
 **Build sequence:**
 - [x] **Day 7:** one stream session paying real per-second ticks against Archer, landing in `stream_events`.
 - [x] **Day 8:** dashboard streaming meter via Supabase real-time; **tap-to-stop** with visible invariant (*cost = ticks × rate*).
-- [ ] **Days 9–10:** harden edges — failed tick mid-stream, buyer out of balance, clean session close. Make "the meter provably can't over-charge" visible in the demo.
+- [x] **Days 9–10 (partial):** hung-tick timeout — per-tick client/server cap, fail-closed close with exact-cost invariant preserved.
+- [ ] **Days 9–10 (remaining):** out-of-balance mid-stream, abandoned session zombie prevention.
 
 **In parallel, all four days — traction:**
 - [ ] Keep driving demo buys / Scout activity. Track: distinct paying clients, total payments, total USDC volume, avg transaction size (sub-cent). Streaming and traction are independent — a bad day on one never blocks the other.

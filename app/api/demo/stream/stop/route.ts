@@ -11,10 +11,12 @@ export async function POST(req: NextRequest) {
   const ip = getClientIp(req);
 
   let sessionId: string | undefined;
+  let reason: string | undefined;
   try {
     const body = await req.json();
     sessionId =
       typeof body?.session_id === "string" ? body.session_id : undefined;
+    reason = typeof body?.reason === "string" ? body.reason : undefined;
   } catch {
     return NextResponse.json(
       { error: "Invalid JSON body" },
@@ -48,11 +50,20 @@ export async function POST(req: NextRequest) {
   const rateUsdc = getStreamRateUsdc();
   const totalUsdc = expectedStreamTotal(session.tickCount);
 
+  const labels: Record<string, string> = {
+    tick_timeout:
+      "Stream closed — tick timed out. No further authorizations signed; you pay only for verified ticks.",
+    tick_failed:
+      "Stream closed — tick failed. No further authorizations signed; you pay only for verified ticks.",
+    user: "Stream stopped — no further authorizations will be signed for this session.",
+  };
+
   return NextResponse.json({
     demo: true,
     source: "stream",
     session_id: sessionId,
     stopped: true,
+    reason: reason ?? "user",
     tick_count: session.tickCount,
     rate_usdc: rateUsdc,
     authorized_total_usdc: totalUsdc,
@@ -60,7 +71,7 @@ export async function POST(req: NextRequest) {
       formula: `${session.tickCount} × ${rateUsdc} = ${totalUsdc}`,
       holds: totalUsdc === expectedStreamTotal(session.tickCount),
     },
-    label:
-      "Stream stopped — no further authorizations will be signed for this session.",
+    label: labels[reason ?? "user"] ?? labels.user,
+    fail_closed: reason === "tick_timeout" || reason === "tick_failed",
   });
 }

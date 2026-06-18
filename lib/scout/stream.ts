@@ -20,6 +20,8 @@ import {
   STREAM_SESSION_HEADER,
   STREAM_TICK_HEADER,
 } from "../stream/headers.ts";
+import { STREAM_TICK_SERVER_TIMEOUT_MS } from "../stream/constants.ts";
+import { withServerTimeout } from "../stream/fetch-with-timeout.ts";
 import { normalizeBaseUrl } from "../utils.ts";
 
 const ARC_TESTNET_USDC = "0x3600000000000000000000000000000000000000" as const;
@@ -210,14 +212,18 @@ export async function startStream(
     const start = Date.now();
 
     try {
-      const result = await gateway.pay(targetUrl, {
-        method: "GET",
-        headers: {
-          [PAYMENT_SOURCE_HEADER]: "stream",
-          [STREAM_SESSION_HEADER]: sessionId,
-          [STREAM_TICK_HEADER]: String(tick),
-        },
-      });
+      const result = await withServerTimeout(
+        gateway.pay(targetUrl, {
+          method: "GET",
+          headers: {
+            [PAYMENT_SOURCE_HEADER]: "stream",
+            [STREAM_SESSION_HEADER]: sessionId,
+            [STREAM_TICK_HEADER]: String(tick),
+          },
+        }),
+        STREAM_TICK_SERVER_TIMEOUT_MS,
+        "Stream tick",
+      );
 
       const amount = parseFloat(result.formattedAmount);
       state.tickCount = tick;
@@ -256,6 +262,11 @@ export async function startStream(
       options.onTick?.(tickResult);
       console.error(`[scout/stream] tick ${tick} failed: ${message}`);
       state.running = false;
+      if (message.includes("timed out")) {
+        console.error(
+          `[scout/stream] Session ${sessionId} closed fail-closed after ${state.tickCount} verified tick(s)`,
+        );
+      }
     } finally {
       tickInFlight = false;
       if (state.running && !state.stopping) {

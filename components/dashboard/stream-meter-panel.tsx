@@ -5,8 +5,15 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Square } from "lucide-react";
 import { useStreamEvents } from "@/hooks/use-stream-events";
-
-const STREAM_RATE_USDC = 0.0001;
+import {
+  STREAM_RATE_USDC,
+  STREAM_TICK_TIMEOUT_MS,
+  buildStreamInvariant,
+} from "@/lib/stream/constants";
+import {
+  FetchTimeoutError,
+  fetchWithTimeout,
+} from "@/lib/stream/fetch-with-timeout";
 
 interface StreamStartResponse {
   session_id: string;
@@ -18,12 +25,16 @@ interface StreamStopResponse {
   tick_count: number;
   authorized_total_usdc: string;
   rate_usdc: string;
+  reason?: string;
+  fail_closed?: boolean;
   invariant: {
     formula: string;
     holds: boolean;
   };
   label: string;
 }
+
+type CloseReason = "user" | "tick_timeout" | "tick_failed";
 
 function formatDuration(seconds: number): string {
   const m = Math.floor(seconds / 60);
@@ -42,6 +53,10 @@ export function StreamMeterPanel() {
     null,
   );
   const [pendingTick, setPendingTick] = useState(false);
+  const [pendingTickNumber, setPendingTickNumber] = useState<number | null>(
+    null,
+  );
+  const [failClosed, setFailClosed] = useState(false);
 
   const tickRef = useRef(0);
   const durationRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -77,69 +92,138 @@ export function StreamMeterPanel() {
     }
   }, []);
 
-  const stopStream = useCallback(async () => {
-    if (stoppingRef.current) return;
-    stoppingRef.current = true;
+  const haltLoop = useCallback(() => {
     runningRef.current = false;
-    clearTimers();
+    stoppingRef.current = true;
     setRunning(false);
+    setPendingTick(false);
+    setPendingTickNumber(null);
+    clearTimers();
+  }, [clearTimers]);
 
-    if (!sessionId) {
-      stoppingRef.current = false;
-      return;
-    }
-
-    try {
-      const res = await fetch("/api/demo/stream/stop", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ session_id: sessionId }),
-      });
-      const data = (await res.json()) as StreamStopResponse & {
-        error?: string;
-        message?: string;
+  const buildLocalStopSummary = useCallback(
+    (verifiedTicks: number, reason: CloseReason): StreamStopResponse => {
+      const built = buildStreamInvariant(verifiedTicks);
+      const labels: Record<CloseReason, string> = {
+        tick_timeout: `Tick timed out after ${STREAM_TICK_TIMEOUT_MS / 1000}s — stream closed. No further authorizations signed; charged only for ${verifiedTicks} verified tick(s).`,
+        tick_failed: `Tick failed — stream closed. No further authorizations signed; charged only for ${verifiedTicks} verified tick(s).`,
+        user: "Stream stopped — no further authorizations will be signed for this session.",
       };
-      if (!res.ok) {
-        setError(data.message ?? data.error ?? "Stop failed");
-      } else {
-        setStopSummary(data);
+      return {
+        tick_count: built.tick_count,
+        authorized_total_usdc: built.authorized_total_usdc,
+        rate_usdc: built.rate_usdc,
+        invariant: built.invariant,
+        label: labels[reason],
+        reason,
+        fail_closed: reason !== "user",
+      };
+    },
+    [],
+  );
+
+  const closeSession = useCallback(
+    async (sid: string, reason: CloseReason, detail?: string) => {
+      if (stoppingRef.current && reason === "user") return;
+      haltLoop();
+
+      const verifiedTicks = tickRef.current;
+      setFailClosed(reason !== "user");
+
+      try {
+        const res = await fetchWithTimeout(
+          "/api/demo/stream/stop",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ session_id: sid, reason }),
+          },
+          5000,
+          "Stop stream",
+        );
+        const data = (await res.json()) as StreamStopResponse & {
+          error?: string;
+          message?: string;
+        };
+        if (res.ok) {
+          setStopSummary(data);
+          setError(null);
+        } else {
+          setStopSummary(buildLocalStopSummary(verifiedTicks, reason));
+          setError(data.message ?? data.error ?? detail ?? "Stop failed");
+        }
+      } catch {
+        setStopSummary(buildLocalStopSummary(verifiedTicks, reason));
+        if (detail) setError(detail);
+      } finally {
+        stoppingRef.current = false;
       }
-    } catch (err) {
-      setError((err as Error).message);
-    } finally {
-      stoppingRef.current = false;
-    }
-  }, [sessionId, clearTimers]);
+    },
+    [haltLoop, buildLocalStopSummary],
+  );
 
-  const fireTick = useCallback(async (sid: string) => {
-    if (stoppingRef.current) return;
-    const nextTick = tickRef.current + 1;
-    setPendingTick(true);
+  const stopStream = useCallback(async () => {
+    if (!sessionId) return;
+    await closeSession(sessionId, "user");
+  }, [sessionId, closeSession]);
 
-    try {
-      const res = await fetch("/api/demo/stream/tick", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ session_id: sid, tick: nextTick }),
-      });
-      const data = await res.json();
+  const fireTick = useCallback(
+    async (sid: string) => {
+      if (stoppingRef.current || !runningRef.current) return;
 
-      if (!res.ok) {
-        setError(data.message ?? data.error ?? "Tick failed");
-        await stopStream();
-        return;
+      const nextTick = tickRef.current + 1;
+      setPendingTick(true);
+      setPendingTickNumber(nextTick);
+
+      try {
+        const res = await fetchWithTimeout(
+          "/api/demo/stream/tick",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ session_id: sid, tick: nextTick }),
+          },
+          STREAM_TICK_TIMEOUT_MS,
+          `Tick ${nextTick}`,
+        );
+        const data = await res.json();
+
+        if (!res.ok) {
+          const message =
+            data.message ?? data.error ?? `Tick ${nextTick} failed`;
+          await closeSession(
+            sid,
+            res.status === 504 ? "tick_timeout" : "tick_failed",
+            message,
+          );
+          return;
+        }
+
+        tickRef.current = nextTick;
+        setLocalTicks(nextTick);
+        setError(null);
+        setFailClosed(false);
+      } catch (err) {
+        if (err instanceof FetchTimeoutError) {
+          await closeSession(
+            sid,
+            "tick_timeout",
+            `Tick ${nextTick} timed out — stream closed. Charged only for ${tickRef.current} verified tick(s); no further authorizations signed.`,
+          );
+          return;
+        }
+        await closeSession(
+          sid,
+          "tick_failed",
+          err instanceof Error ? err.message : String(err),
+        );
+      } finally {
+        setPendingTick(false);
+        setPendingTickNumber(null);
       }
-
-      tickRef.current = nextTick;
-      setLocalTicks(nextTick);
-      setError(null);
-    } catch (err) {
-      setError((err as Error).message);
-      await stopStream();
-    } finally {
-      setPendingTick(false);
-    }
-  }, [stopStream]);
+    },
+    [closeSession],
+  );
 
   const runTickLoop = useCallback(
     async (sid: string) => {
@@ -155,6 +239,7 @@ export function StreamMeterPanel() {
   const startStream = useCallback(async () => {
     setError(null);
     setStopSummary(null);
+    setFailClosed(false);
     setLocalTicks(0);
     tickRef.current = 0;
     setDurationSec(0);
@@ -246,7 +331,9 @@ export function StreamMeterPanel() {
           </p>
           <p className="mt-1 text-xs text-[#EDE6D6]/50">
             {displayTicks} tick{displayTicks !== 1 ? "s" : ""}
-            {pendingTick ? " · signing…" : ""}
+            {pendingTick && pendingTickNumber !== null
+              ? ` · signing tick ${pendingTickNumber}… (max ${STREAM_TICK_TIMEOUT_MS / 1000}s)`
+              : ""}
           </p>
         </div>
         <div className="rounded-lg border border-[#7A5C1E]/40 bg-black/40 p-4">
@@ -265,19 +352,23 @@ export function StreamMeterPanel() {
       {showInvariant && (
         <div
           className={`mb-4 rounded-lg border px-4 py-3 text-sm ${
-            invariantHolds && stopSummary?.invariant.holds !== false
-              ? "border-[#3FB950]/50 bg-[#3FB950]/10 text-[#3FB950]"
-              : "border-red-500/50 bg-red-950/30 text-red-200"
+            failClosed
+              ? "border-[#D4AF37]/50 bg-[#D4AF37]/10 text-[#E8C766]"
+              : invariantHolds && stopSummary?.invariant.holds !== false
+                ? "border-[#3FB950]/50 bg-[#3FB950]/10 text-[#3FB950]"
+                : "border-red-500/50 bg-red-950/30 text-red-200"
           }`}
         >
-          <p className="font-medium">Exact-cost invariant</p>
+          <p className="font-medium">
+            {failClosed ? "Fail-closed — exact cost preserved" : "Exact-cost invariant"}
+          </p>
           <p className="mt-1 font-mono text-xs">
             {displayTicks} × ${STREAM_RATE_USDC.toFixed(4)} = $
             {displayExpected.toFixed(6)}
             {invariantHolds ? " ✓" : " ✗ drift"}
           </p>
           {stopSummary && (
-            <p className="mt-2 text-xs opacity-80">{stopSummary.label}</p>
+            <p className="mt-2 text-xs opacity-90">{stopSummary.label}</p>
           )}
         </div>
       )}
