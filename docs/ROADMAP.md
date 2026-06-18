@@ -17,7 +17,7 @@
 | 4–6b | Honest human demo-buy path (`/try`) | ✅ Done & live |
 | — | **Release `/try` + start traction outreach** | ⏳ In progress |
 | 7–8 | **Pay-per-second streaming — loop + dashboard meter** | ✅ Done (local verified; deploy pending) |
-| 9–10 | Stream adversarial hardening (failed tick, out-of-balance, clean close) | ⬜ Not started |
+| 9–10 | Stream adversarial hardening (failed tick, out-of-balance, clean close) | ⏳ Partial — hung-tick + reconciliation shipped; out-of-balance + abandoned session deferred |
 | 11–12 | Two-sided Archer↔Scout loop + dashboard polish + optional upside | ⬜ Not started |
 | 13–14 | Demo video, README/submission polish, final submit | ⬜ Not started |
 
@@ -60,8 +60,11 @@ The one axis no prior-cohort winner occupied. Highest variance — protect this 
 **Build sequence:**
 - [x] **Day 7:** one stream session paying real per-second ticks against Archer, landing in `stream_events`.
 - [x] **Day 8:** dashboard streaming meter via Supabase real-time; **tap-to-stop** with visible invariant (*cost = ticks × rate*).
-- [x] **Days 9–10 (partial):** hung-tick timeout — per-tick client/server cap, fail-closed close with exact-cost invariant preserved.
-- [ ] **Days 9–10 (remaining):** out-of-balance mid-stream, abandoned session zombie prevention.
+- [x] **Days 9–10 (partial):** hung-tick timeout, fail-closed close, meter/banner reconciled to `stream_events` (verified browser + forced-409 curl, Jun 18).
+- [ ] **Days 9–10 (remaining — deferred to Day 11+ if slack):** out-of-balance mid-stream; abandoned-session zombie prevention (higher value of the two — judge may close tab mid-stream and funder keeps spending).
+
+**Deferred polish (internal, not judge-facing — revisit if Day 11 finishes with slack):**
+- Natural late-tick path can leave `demo_stream_sessions.tick_count` stale when tick N lands in `stream_events` *after* `/stop` returns (409-align in the tick route ran against an earlier snapshot; forced-curl mid-flight test does not cover this timing). Money and UI are correct because both read `verifiedStreamTickCount` / `stream_events`. Clean fix: **align-on-`/stop`** — unconditionally set session-row `tick_count` from `stream_events` at stop time, not only inside the 409 handler.
 
 **In parallel, all four days — traction:**
 - [ ] Keep driving demo buys / Scout activity. Track: distinct paying clients, total payments, total USDC volume, avg transaction size (sub-cent). Streaming and traction are independent — a bad day on one never blocks the other.
@@ -71,6 +74,8 @@ The one axis no prior-cohort winner occupied. Highest variance — protect this 
 ---
 
 ## Days 11–12 — Two-sided loop, polish, optional upside
+
+**Primary:** wire the full **Archer↔Scout** loop (scored agentic 30% — do not let streaming edge cases pull focus here).
 
 - [ ] Wire the full **Archer↔Scout** loop: one instance sells, one buys on a budget, settling sub-cent on Arc with no human in the loop. (Vehicle for the demo's "two agents settle a fraction of a cent in <0.5s" moment.)
 - [ ] Dashboard polish: live money-flow + streaming meter reading cleanly together; demo/scout split legible to a stranger.
