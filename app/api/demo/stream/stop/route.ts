@@ -7,6 +7,7 @@ import {
   stopDemoStreamSession,
 } from "@/lib/demo/stream-session";
 import { verifiedStreamTickCount } from "@/lib/demo/stream-session-store";
+import { streamCloseLabel } from "@/lib/stream/constants";
 
 export const maxDuration = 60;
 
@@ -45,15 +46,17 @@ export async function POST(req: NextRequest) {
   const session = existing ? await stopDemoStreamSession(sessionId) : null;
   const rateUsdc = getStreamRateUsdc();
   const dbTicks = await verifiedStreamTickCount(sessionId);
-  const tickCount = Math.max(session?.tickCount ?? 0, dbTicks);
+  const tickCount = dbTicks;
   const totalUsdc = expectedStreamTotal(tickCount);
+  const closeReason = (reason ?? "user") as "user" | "tick_timeout" | "tick_failed";
+  const sessionRowMissing = !existing && dbTicks > 0;
+  const sessionTickDrift =
+    existing !== null && session !== null && session.tickCount !== dbTicks;
 
   const labels: Record<string, string> = {
-    tick_timeout:
-      "Stream closed — tick timed out. No further authorizations signed; you pay only for verified ticks.",
-    tick_failed:
-      "Stream closed — tick failed. No further authorizations signed; you pay only for verified ticks.",
-    user: "Stream stopped — no further authorizations will be signed for this session.",
+    tick_timeout: streamCloseLabel("tick_timeout", tickCount),
+    tick_failed: streamCloseLabel("tick_failed", tickCount),
+    user: streamCloseLabel("user", tickCount),
   };
 
   return NextResponse.json({
@@ -61,7 +64,7 @@ export async function POST(req: NextRequest) {
     source: "stream",
     session_id: sessionId,
     stopped: true,
-    reason: reason ?? "user",
+    reason: closeReason,
     tick_count: tickCount,
     rate_usdc: rateUsdc,
     authorized_total_usdc: totalUsdc,
@@ -69,7 +72,9 @@ export async function POST(req: NextRequest) {
       formula: `${tickCount} × ${rateUsdc} = ${totalUsdc}`,
       holds: totalUsdc === expectedStreamTotal(tickCount),
     },
-    label: labels[reason ?? "user"] ?? labels.user,
-    fail_closed: reason === "tick_timeout" || reason === "tick_failed",
+    label: labels[closeReason] ?? labels.user,
+    fail_closed: closeReason === "tick_timeout" || closeReason === "tick_failed",
+    session_row_missing: sessionRowMissing,
+    session_tick_drift: sessionTickDrift,
   });
 }

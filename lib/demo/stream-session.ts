@@ -48,6 +48,15 @@ export async function resolveDemoStreamSession(
   return cacheSession(loaded);
 }
 
+/** Re-read session state from Supabase and refresh the per-instance cache. */
+export async function refreshDemoStreamSessionFromDb(
+  sessionId: string,
+): Promise<DemoStreamSession | null> {
+  const loaded = await loadStreamSession(sessionId);
+  if (!loaded) return null;
+  return cacheSession(loaded);
+}
+
 export async function stopDemoStreamSession(
   sessionId: string,
 ): Promise<DemoStreamSession | null> {

@@ -39,6 +39,23 @@ export function buildStreamInvariant(tickCount: number) {
 }
 
 /** Dedupe stream rows — keep highest cumulative per tick_number. */
+export type StreamCloseReason = "user" | "tick_timeout" | "tick_failed";
+
+/** Banner copy — always pass verified tick count from stream_events, not session row. */
+export function streamCloseLabel(
+  reason: StreamCloseReason,
+  verifiedTickCount: number,
+): string {
+  if (reason === "user") {
+    return "Stream stopped — no further authorizations will be signed for this session.";
+  }
+  const head =
+    reason === "tick_timeout"
+      ? "Stream closed — tick timed out. No further authorizations signed; you pay only for verified ticks."
+      : "Stream closed — tick failed. No further authorizations signed; you pay only for verified ticks.";
+  return `${head} Charged for ${verifiedTickCount} verified tick(s).`;
+}
+
 export function dedupeStreamEvents<
   T extends { id: string; tick_number: number; cumulative_usdc: string },
 >(events: T[]): T[] {

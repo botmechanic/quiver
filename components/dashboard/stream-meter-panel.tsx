@@ -8,6 +8,7 @@ import { useStreamEvents } from "@/hooks/use-stream-events";
 import {
   STREAM_RATE_USDC,
   buildStreamInvariant,
+  streamCloseLabel,
   tickTimeoutMs,
 } from "@/lib/stream/constants";
 import {
@@ -27,6 +28,8 @@ interface StreamStopResponse {
   rate_usdc: string;
   reason?: string;
   fail_closed?: boolean;
+  session_row_missing?: boolean;
+  session_tick_drift?: boolean;
   invariant: {
     formula: string;
     holds: boolean;
@@ -99,12 +102,6 @@ export function StreamMeterPanel() {
     dbTickRef.current = tickCount;
   }, [tickCount]);
 
-  const verifiedTicks = Math.max(tickCount, localTicks, tickRef.current);
-  const authorizedTotal = Math.max(
-    parseFloat(cumulativeUsdc || "0"),
-    localTicks * STREAM_RATE_USDC,
-  );
-
   useEffect(() => {
     if (!running || !startedAt) return;
     durationRef.current = setInterval(() => {
@@ -134,21 +131,12 @@ export function StreamMeterPanel() {
   const buildLocalStopSummary = useCallback(
     (verifiedTickCount: number, reason: CloseReason): StreamStopResponse => {
       const built = buildStreamInvariant(verifiedTickCount);
-      const timeoutLabel =
-        reason === "tick_timeout"
-          ? `Tick timed out — stream closed. No further authorizations signed; charged only for ${verifiedTickCount} verified tick(s).`
-          : `Tick failed — stream closed. No further authorizations signed; charged only for ${verifiedTickCount} verified tick(s).`;
-      const labels: Record<CloseReason, string> = {
-        tick_timeout: timeoutLabel,
-        tick_failed: timeoutLabel.replace("timed out", "failed"),
-        user: "Stream stopped — no further authorizations will be signed for this session.",
-      };
       return {
         tick_count: built.tick_count,
         authorized_total_usdc: built.authorized_total_usdc,
         rate_usdc: built.rate_usdc,
         invariant: built.invariant,
-        label: labels[reason],
+        label: streamCloseLabel(reason, verifiedTickCount),
         reason,
         fail_closed: reason !== "user",
       };
@@ -196,12 +184,10 @@ export function StreamMeterPanel() {
           setStopSummary({
             ...data,
             ...summary,
-            label:
-              reconciled > 0 && reason !== "user"
-                ? `${data.label} Charged for ${reconciled} verified tick(s).`
-                : data.label,
             reason: data.reason,
             fail_closed: data.fail_closed,
+            session_row_missing: data.session_row_missing,
+            session_tick_drift: data.session_tick_drift,
           });
           setError(reconciled > 0 ? null : detail ?? null);
         } else {
@@ -355,11 +341,14 @@ export function StreamMeterPanel() {
   }, [tickCount, sessionId, running]);
 
   const displayTicks = Math.max(
-    verifiedTicks,
+    tickCount,
+    localTicks,
+    tickRef.current,
     stopSummary?.tick_count ?? 0,
   );
   const displayTotal = Math.max(
-    authorizedTotal,
+    parseFloat(cumulativeUsdc || "0"),
+    localTicks * STREAM_RATE_USDC,
     parseFloat(stopSummary?.authorized_total_usdc ?? "0"),
   );
   const displayExpected = Number(
@@ -370,6 +359,10 @@ export function StreamMeterPanel() {
     Math.abs(displayTotal - displayExpected) < 0.000001;
   const showInvariant =
     stopSummary !== null || (!running && displayTicks > 0);
+  const closeLabel =
+    stopSummary?.reason != null
+      ? streamCloseLabel(stopSummary.reason as CloseReason, displayTicks)
+      : null;
 
   return (
     <section className="rounded-xl border border-[#3FB950]/40 bg-[#0B0B0D] p-6 text-[#EDE6D6] shadow-lg">
@@ -450,8 +443,14 @@ export function StreamMeterPanel() {
             {displayExpected.toFixed(6)}
             {displayInvariantHolds ? " ✓" : " ✗ drift"}
           </p>
-          {stopSummary && (
-            <p className="mt-2 text-xs opacity-90">{stopSummary.label}</p>
+          {closeLabel && (
+            <p className="mt-2 text-xs opacity-90">{closeLabel}</p>
+          )}
+          {stopSummary?.session_row_missing && (
+            <p className="mt-1 text-xs opacity-75">
+              Session row missing in DB — verified ticks reconciled from
+              stream_events.
+            </p>
           )}
         </div>
       )}

@@ -8,9 +8,14 @@ import {
   advanceStreamTick,
   expectedStreamTotal,
   failDemoStreamSession,
+  refreshDemoStreamSessionFromDb,
   resolveDemoStreamSession,
   validateStreamTick,
 } from "@/lib/demo/stream-session";
+import {
+  alignSessionTickCountWithEvents,
+  verifiedStreamTickCount,
+} from "@/lib/demo/stream-session-store";
 import {
   STREAM_TICK_SERVER_TIMEOUT_MS,
   tickTimeoutMs,
@@ -71,12 +76,18 @@ export async function POST(req: NextRequest) {
       "Stream tick",
     );
 
-    if (session.stopped) {
+    const fresh = await refreshDemoStreamSessionFromDb(sessionId);
+    const verifiedTicks = await verifiedStreamTickCount(sessionId);
+
+    if (!fresh) {
       return NextResponse.json(
         {
           error: "Stream session closed",
           message:
-            "Tick completed after the session was stopped — no further ticks will be accepted.",
+            "Tick verified but session row is missing — no further ticks will be accepted.",
+          session_row_missing: verifiedTicks > 0,
+          verified_ticks: verifiedTicks,
+          authorized_total_usdc: expectedStreamTotal(verifiedTicks),
           settlement: {
             amount_usdc: payment.amount,
             payer: payment.payer,
@@ -87,15 +98,34 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    await advanceStreamTick(session);
+    if (fresh.stopped) {
+      const alignedTicks = await alignSessionTickCountWithEvents(sessionId);
+      return NextResponse.json(
+        {
+          error: "Stream session closed",
+          message:
+            "Tick completed after the session was stopped — no further ticks will be accepted.",
+          verified_ticks: alignedTicks,
+          authorized_total_usdc: expectedStreamTotal(alignedTicks),
+          settlement: {
+            amount_usdc: payment.amount,
+            payer: payment.payer,
+            elapsed_ms: payment.elapsedMs,
+          },
+        },
+        { status: 409 },
+      );
+    }
 
-    const cumulativeUsdc = expectedStreamTotal(session.tickCount);
+    await advanceStreamTick(fresh);
+
+    const cumulativeUsdc = expectedStreamTotal(fresh.tickCount);
 
     return NextResponse.json({
       demo: true,
       source: "stream",
       session_id: sessionId,
-      tick: session.tickCount,
+      tick: fresh.tickCount,
       settlement: {
         amount_usdc: payment.amount,
         cumulative_usdc: cumulativeUsdc,
@@ -106,7 +136,7 @@ export async function POST(req: NextRequest) {
       },
       archer: payment.data,
       invariant: {
-        ticks: session.tickCount,
+        ticks: fresh.tickCount,
         rate_usdc: "0.000100",
         expected_total_usdc: cumulativeUsdc,
         holds: payment.amount === "0.0001",
@@ -116,14 +146,15 @@ export async function POST(req: NextRequest) {
     const message = error instanceof Error ? error.message : String(error);
     console.error("[demo/stream/tick] Failed:", message);
     await failDemoStreamSession(sessionId, message);
+    const verifiedTicks = await verifiedStreamTickCount(sessionId);
     const isTimeout = message.includes("timed out");
     return NextResponse.json(
       {
         error: isTimeout ? "Stream tick timed out" : "Stream tick failed",
         message,
         fail_closed: true,
-        verified_ticks: session.tickCount,
-        authorized_total_usdc: expectedStreamTotal(session.tickCount),
+        verified_ticks: verifiedTicks,
+        authorized_total_usdc: expectedStreamTotal(verifiedTicks),
       },
       { status: isTimeout ? 504 : 500 },
     );

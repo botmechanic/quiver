@@ -67,3 +67,20 @@ export async function verifiedStreamTickCount(
   if (error || !data?.length) return 0;
   return data[0].tick_number;
 }
+
+/** Align demo_stream_sessions.tick_count with verified stream_events rows. */
+export async function alignSessionTickCountWithEvents(
+  sessionId: string,
+): Promise<number> {
+  const dbTicks = await verifiedStreamTickCount(sessionId);
+  if (dbTicks === 0) return 0;
+
+  const loaded = await loadStreamSession(sessionId);
+  if (!loaded) return dbTicks;
+
+  if (loaded.tickCount !== dbTicks) {
+    loaded.tickCount = dbTicks;
+    await persistStreamSession(loaded);
+  }
+  return dbTicks;
+}
