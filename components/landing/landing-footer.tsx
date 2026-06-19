@@ -55,7 +55,7 @@ export function LandingFooter() {
             </Link>
           </nav>
         </div>
-        <p className="mt-10 text-center text-[10px] uppercase tracking-[0.2em] text-muted-foreground/50">
+        <p className="mt-10 text-center text-[11px] uppercase tracking-[0.2em] text-muted-foreground/50">
           Lepton Agents Hackathon · Circle Gateway · x402
         </p>
       </div>

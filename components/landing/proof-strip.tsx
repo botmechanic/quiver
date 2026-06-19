@@ -20,13 +20,13 @@ function ProofStat({
 }) {
   return (
     <div className="rounded-lg border border-border/30 bg-card/60 px-4 py-4">
-      <p className="text-[10px] font-medium uppercase tracking-[0.15em] text-muted-foreground">
+      <p className="text-xs font-medium uppercase tracking-[0.15em] text-muted-foreground">
         {label}
       </p>
-      <p className="mt-2 font-mono text-2xl font-semibold text-foreground">
+      <p className="mt-3 font-mono text-3xl font-semibold text-foreground">
         {value}
       </p>
-      <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+      <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
         {detail}
       </p>
     </div>
@@ -37,7 +37,7 @@ function ProofStripStub() {
   return (
     <section className="border-b border-border/25 py-16 sm:py-20 lg:py-24">
       <div className="mx-auto max-w-5xl px-5 sm:px-8">
-        <p className="text-sm text-muted-foreground">
+        <p className="text-base leading-relaxed text-muted-foreground">
           No settlements recorded yet —{" "}
           <a href="/try" className="text-primary hover:underline">
             trigger the first demo buy
@@ -91,10 +91,10 @@ export function ProofStrip() {
     <section className="border-b border-border/25 py-16 sm:py-20 lg:py-24">
       <div className="mx-auto max-w-5xl px-5 sm:px-8">
         <div className="mb-8 flex flex-wrap items-center gap-3">
-          <h2 className="text-sm font-medium text-muted-foreground">
+          <h2 className="text-base font-medium text-muted-foreground">
             Live proof from Arc testnet
           </h2>
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-signal/30 bg-signal/10 px-2.5 py-0.5 text-[10px] uppercase tracking-[0.12em] text-signal">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-signal/30 bg-signal/10 px-2.5 py-0.5 text-xs uppercase tracking-[0.12em] text-signal">
             <span className="h-1.5 w-1.5 rounded-full bg-signal" aria-hidden />
             Realtime
           </span>

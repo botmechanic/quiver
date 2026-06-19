@@ -57,10 +57,10 @@ export default function LoginPage() {
 
       <Card className="w-full max-w-sm border-border/30 bg-card/80">
         <CardHeader>
-          <CardTitle className="font-display text-xl text-foreground">
+          <CardTitle className="font-display text-2xl leading-[1.15] text-foreground">
             Operator sign-in
           </CardTitle>
-          <CardDescription>
+          <CardDescription className="text-base leading-relaxed">
             Dashboard access for monitoring payments, streams, and withdrawals.
           </CardDescription>
         </CardHeader>

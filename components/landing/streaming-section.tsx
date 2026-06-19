@@ -11,19 +11,19 @@ export function StreamingSection() {
       <div className="mx-auto max-w-5xl px-5 sm:px-8">
         <div className="grid gap-14 lg:grid-cols-2 lg:items-center lg:gap-16">
           <div>
-            <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-primary/70">
+            <p className="text-xs font-medium uppercase tracking-[0.18em] text-primary/70">
               Headline feature
             </p>
-            <h2 className="font-display mt-4 text-3xl text-foreground sm:text-4xl">
+            <h2 className="font-display mt-6 text-4xl leading-[1.1] text-foreground sm:text-5xl">
               Pay-per-second streaming over x402
             </h2>
-            <p className="mt-5 leading-relaxed text-muted-foreground">
+            <p className="mt-8 max-w-[65ch] text-base leading-relaxed text-muted-foreground sm:text-[17px]">
               There is no native &ldquo;approve a rate&rdquo; primitive on Arc.
               Quiver composes streaming from discrete per-tick EIP-3009
               authorizations — one per second — that Circle Gateway verifies
               instantly and settles in batches.
             </p>
-            <ul className="mt-8 space-y-3 text-sm leading-relaxed text-muted-foreground">
+            <ul className="mt-8 max-w-[65ch] space-y-4 text-base leading-relaxed text-muted-foreground">
               <li>
                 Scout signs a fresh authorization every tick from one ephemeral
                 wallet per session.
@@ -39,7 +39,7 @@ export function StreamingSection() {
                 — the exact-cost invariant, always visible on the dashboard.
               </li>
             </ul>
-            <p className="mt-6 text-sm text-muted-foreground">
+            <p className="mt-8 max-w-[65ch] text-base leading-relaxed text-muted-foreground">
               Surface authorized / verified volume, not settled — verification
               is sub-500ms; batch settlement lags.
             </p>

@@ -42,7 +42,7 @@ export function LandingNav() {
               <Link
                 key={link.href}
                 href={link.href}
-                className="text-sm text-muted-foreground transition-colors hover:text-primary"
+                className="text-[15px] text-muted-foreground transition-colors hover:text-primary"
               >
                 {link.label}
               </Link>

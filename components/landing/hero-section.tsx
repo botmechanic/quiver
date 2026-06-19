@@ -7,14 +7,14 @@ export function HeroSection() {
     <section className="relative border-b border-border/25">
       <div className="mx-auto max-w-5xl px-5 sm:px-8">
         <div className="grid items-center gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(260px,44%)] lg:gap-14">
-          <div className="relative z-10 py-20 sm:py-28 lg:py-36">
-            <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-primary/70">
+          <div className="relative z-10 py-28 sm:py-32 lg:py-40">
+            <p className="text-xs font-medium uppercase tracking-[0.18em] text-primary/70">
               Nanopayments on Arc
             </p>
-            <h1 className="font-display mt-6 max-w-xl text-4xl leading-[1.08] text-foreground sm:text-5xl lg:text-[3.25rem]">
+            <h1 className="font-display mt-6 max-w-2xl text-5xl leading-[1.05] text-foreground sm:text-6xl lg:text-[4.5rem]">
               Two agents. Real money. A fraction of a cent at a time.
             </h1>
-            <p className="mt-6 max-w-lg text-base leading-relaxed text-muted-foreground sm:text-[17px] sm:leading-7">
+            <p className="mt-8 max-w-[34ch] text-lg leading-8 text-muted-foreground sm:max-w-xl sm:text-xl">
               Archer sells signals over x402 and prices every request itself.
               Scout reads the price and the confidence, then decides whether to
               buy. The headline: a live stream that bills per second and stops

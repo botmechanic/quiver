@@ -98,19 +98,19 @@ export function TryQuiverPanel({
       )}
     >
       <div className={cn("mb-4", isCompact && "mb-3")}>
-        <p className="text-[11px] uppercase tracking-[0.2em] text-primary/70">
+        <p className="text-[11px] uppercase tracking-[0.18em] text-primary/70">
           Try Quiver
         </p>
         <h2
           className={cn(
-            "mt-3 font-semibold text-foreground",
-            isCompact ? "text-lg" : "text-xl",
-            variant === "landing" && "font-display text-2xl sm:text-[1.65rem]",
+            "mt-4 font-semibold text-foreground",
+            isCompact ? "text-xl" : "text-2xl",
+            variant === "landing" && "font-display text-2xl leading-[1.15] sm:text-3xl",
           )}
         >
           Buy one Archer signal — no wallet needed
         </h2>
-        <p className="mt-2 text-sm text-muted-foreground">
+        <p className="mt-3 text-base leading-relaxed text-muted-foreground">
           This button triggers a{" "}
           <strong className="font-medium text-foreground">demo-funded</strong>{" "}
           real x402 payment from Quiver&apos;s funder wallet. It settles on Arc
