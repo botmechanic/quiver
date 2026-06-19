@@ -35,12 +35,12 @@ export function TickRhythm() {
 
   return (
     <div
-      className="rounded-lg border border-border bg-muted/30 p-5 font-mono text-sm"
+      className="rounded-lg border border-border/30 bg-card/60 p-5 font-mono text-sm"
       aria-hidden
     >
       <div className="flex items-center justify-between gap-4 text-muted-foreground">
         <span>tick</span>
-        <span className="text-accent-foreground">{displayTick}</span>
+        <span className="text-foreground">{displayTick}</span>
       </div>
       <div className="mt-2 flex items-center justify-between gap-4 text-muted-foreground">
         <span>rate</span>
@@ -52,7 +52,7 @@ export function TickRhythm() {
           className={
             !reducedMotion && tick % 3 === 0
               ? "text-signal transition-colors duration-150"
-              : "text-accent-foreground"
+              : "text-foreground"
           }
         >
           ${total}
@@ -64,7 +64,7 @@ export function TickRhythm() {
             key={i}
             className={`h-6 flex-1 rounded-sm border border-border/40 ${
               i < (displayTick % 12)
-                ? "bg-primary/30"
+                ? "bg-primary/20"
                 : i === displayTick % 12 && !reducedMotion
                   ? "bg-signal/40 border-signal/50"
                   : "bg-background/50"

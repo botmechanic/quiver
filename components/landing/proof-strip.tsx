@@ -12,26 +12,22 @@ function ProofStat({
   label,
   value,
   detail,
-  live,
 }: {
   label: string;
   value: string;
   detail: string;
-  live?: boolean;
 }) {
   return (
-    <div className="rounded-lg border border-border bg-card/40 px-4 py-3">
-      <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+    <div className="rounded-lg border border-border/30 bg-card/60 px-4 py-4">
+      <p className="text-[10px] font-medium uppercase tracking-[0.15em] text-muted-foreground">
         {label}
       </p>
-      <p
-        className={`mt-1 font-mono text-2xl font-semibold ${
-          live ? "text-signal" : "text-accent-foreground"
-        }`}
-      >
+      <p className="mt-2 font-mono text-2xl font-semibold text-foreground">
         {value}
       </p>
-      <p className="mt-1 text-xs text-muted-foreground">{detail}</p>
+      <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+        {detail}
+      </p>
     </div>
   );
 }
@@ -60,8 +56,8 @@ export function ProofStrip() {
 
   if (loading) {
     return (
-      <section className="border-b border-border/40 py-10">
-        <div className="mx-auto flex max-w-6xl items-center justify-center gap-2 px-4 text-sm text-muted-foreground sm:px-6">
+      <section className="border-b border-border/25 py-16">
+        <div className="mx-auto flex max-w-5xl items-center justify-center gap-2 px-5 text-sm text-muted-foreground sm:px-8">
           <Loader2 className="h-4 w-4 animate-spin" />
           Loading on-chain proof…
         </div>
@@ -71,8 +67,8 @@ export function ProofStrip() {
 
   if (events.length === 0) {
     return (
-      <section className="border-b border-border/40 py-10">
-        <div className="mx-auto max-w-6xl px-4 text-center sm:px-6">
+      <section className="border-b border-border/25 py-16">
+        <div className="mx-auto max-w-5xl px-5 sm:px-8">
           <p className="text-sm text-muted-foreground">
             No settlements recorded yet —{" "}
             <a href="/try" className="text-primary hover:underline">
@@ -86,18 +82,18 @@ export function ProofStrip() {
   }
 
   return (
-    <section className="border-b border-border/40 py-10 sm:py-14">
-      <div className="mx-auto max-w-6xl px-4 sm:px-6">
-        <div className="mb-6 flex flex-wrap items-center gap-2">
+    <section className="border-b border-border/25 py-16 sm:py-20 lg:py-24">
+      <div className="mx-auto max-w-5xl px-5 sm:px-8">
+        <div className="mb-8 flex flex-wrap items-center gap-3">
           <h2 className="text-sm font-medium text-muted-foreground">
             Live proof from Arc testnet
           </h2>
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-signal/40 bg-signal/10 px-2 py-0.5 text-[10px] uppercase tracking-wider text-signal">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-signal/30 bg-signal/10 px-2.5 py-0.5 text-[10px] uppercase tracking-[0.12em] text-signal">
             <span className="h-1.5 w-1.5 rounded-full bg-signal" aria-hidden />
             Realtime
           </span>
         </div>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <ProofStat
             label="Demo settlements"
             value={String(stats.demoCount)}

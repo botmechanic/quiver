@@ -4,49 +4,57 @@ import { TickRhythm } from "@/components/landing/tick-rhythm";
 
 export function StreamingSection() {
   return (
-    <section className="border-b border-border/40 py-16 sm:py-24">
-      <div className="mx-auto max-w-6xl px-4 sm:px-6">
-        <div className="grid gap-12 lg:grid-cols-2 lg:items-center">
+    <section
+      id="streaming"
+      className="border-b border-border/25 py-20 sm:py-28 lg:py-32"
+    >
+      <div className="mx-auto max-w-5xl px-5 sm:px-8">
+        <div className="grid gap-14 lg:grid-cols-2 lg:items-center lg:gap-16">
           <div>
-            <p className="text-xs font-medium uppercase tracking-[0.25em] text-primary">
+            <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-primary/70">
               Headline feature
             </p>
-            <h2 className="font-display mt-3 text-3xl text-accent-foreground sm:text-4xl">
+            <h2 className="font-display mt-4 text-3xl text-foreground sm:text-4xl">
               Pay-per-second streaming over x402
             </h2>
-            <p className="mt-4 leading-relaxed text-muted-foreground">
+            <p className="mt-5 leading-relaxed text-muted-foreground">
               There is no native &ldquo;approve a rate&rdquo; primitive on Arc.
               Quiver composes streaming from discrete per-tick EIP-3009
               authorizations — one per second — that Circle Gateway verifies
               instantly and settles in batches.
             </p>
-            <ul className="mt-6 space-y-3 text-sm text-muted-foreground">
-              <li className="flex gap-2">
-                <span className="text-primary">→</span>
+            <ul className="mt-8 space-y-3 text-sm leading-relaxed text-muted-foreground">
+              <li>
                 Scout signs a fresh authorization every tick from one ephemeral
                 wallet per session.
               </li>
-              <li className="flex gap-2">
-                <span className="text-primary">→</span>
+              <li>
                 Tap-to-stop: no further auths are signed; you pay for exactly
                 the ticks consumed.
               </li>
-              <li className="flex gap-2">
-                <span className="font-mono text-accent-foreground">
+              <li>
+                <span className="font-mono text-foreground">
                   ticks × rate = total
-                </span>
-                <span>— the exact-cost invariant, always visible on the dashboard.</span>
+                </span>{" "}
+                — the exact-cost invariant, always visible on the dashboard.
               </li>
             </ul>
             <p className="mt-6 text-sm text-muted-foreground">
-              Surface <strong className="font-medium text-foreground">authorized / verified</strong> volume,
-              not settled — verification is sub-500ms; batch settlement lags.
+              Surface authorized / verified volume, not settled — verification
+              is sub-500ms; batch settlement lags.
             </p>
-            <div className="mt-8 flex flex-wrap gap-3">
-              <Button asChild>
+            <div className="mt-10 flex flex-wrap gap-4">
+              <Button
+                asChild
+                className="px-6 font-semibold transition-transform hover:brightness-105 active:translate-y-px"
+              >
                 <Link href="/try">Try a discrete settlement</Link>
               </Button>
-              <Button asChild variant="outline">
+              <Button
+                asChild
+                variant="outline"
+                className="border-border/40 px-6 text-foreground hover:border-border/60 hover:bg-transparent hover:text-primary"
+              >
                 <Link href="/dashboard">Live stream meter</Link>
               </Button>
             </div>

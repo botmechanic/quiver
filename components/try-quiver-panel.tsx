@@ -92,20 +92,20 @@ export function TryQuiverPanel({
   return (
     <section
       className={cn(
-        "rounded-xl border border-border bg-card p-6 text-foreground shadow-lg",
+        "rounded-lg border border-border/30 bg-card/80 p-6 text-foreground shadow-sm",
         isCompact && "p-4",
         className,
       )}
     >
       <div className={cn("mb-4", isCompact && "mb-3")}>
-        <p className="text-xs uppercase tracking-[0.2em] text-primary">
+        <p className="text-[11px] uppercase tracking-[0.2em] text-primary/70">
           Try Quiver
         </p>
         <h2
           className={cn(
-            "mt-2 font-semibold text-accent-foreground",
+            "mt-3 font-semibold text-foreground",
             isCompact ? "text-lg" : "text-xl",
-            variant === "landing" && "font-display text-2xl",
+            variant === "landing" && "font-display text-2xl sm:text-[1.65rem]",
           )}
         >
           Buy one Archer signal — no wallet needed
