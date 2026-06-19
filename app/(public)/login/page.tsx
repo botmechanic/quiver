@@ -49,15 +49,15 @@ export default function LoginPage() {
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center px-4 py-12">
-      <div className="mb-8 w-full max-w-xs">
-        <Link href="/" className="block">
-          <QuiverLogo variant="wordmark" className="mx-auto h-8 w-auto" />
+      <div className="mb-10 flex w-full max-w-xs justify-center">
+        <Link href="/" className="inline-block">
+          <QuiverLogo className="h-9 w-auto sm:h-10" />
         </Link>
       </div>
 
-      <Card className="w-full max-w-sm border-border bg-card">
+      <Card className="w-full max-w-sm border-border/30 bg-card/80">
         <CardHeader>
-          <CardTitle className="font-display text-xl text-accent-foreground">
+          <CardTitle className="font-display text-xl text-foreground">
             Operator sign-in
           </CardTitle>
           <CardDescription>
@@ -99,11 +99,11 @@ export default function LoginPage() {
       </Card>
 
       <p className="mt-6 text-center text-xs text-muted-foreground">
-        <Link href="/" className="text-primary hover:underline">
+        <Link href="/" className="transition-colors hover:text-foreground">
           ← Back to landing
         </Link>
         {" · "}
-        <Link href="/try" className="text-primary hover:underline">
+        <Link href="/try" className="transition-colors hover:text-foreground">
           Try Quiver
         </Link>
       </p>
