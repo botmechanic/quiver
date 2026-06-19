@@ -4,12 +4,31 @@ import { useEffect, useRef } from "react";
 import * as THREE from "three";
 import { cn } from "@/lib/utils";
 
-const GOLD = 0xd4af37;
-const PALE_GOLD = 0xe8c766;
-const SIGNAL_GREEN = 0x3fb950;
-const INK = 0x0b0b0d;
+const FALLBACK = {
+  primary: 0xd4af37,
+  accent: 0xe8c766,
+  signal: 0x3fb950,
+  background: 0x0b0b0d,
+} as const;
 
 const STREAK_COUNT = 48;
+
+function parseHslTriplet(raw: string) {
+  const match = raw.trim().match(/^([\d.]+)\s+([\d.]+)%\s+([\d.]+)%$/);
+  if (!match) return null;
+  return {
+    h: parseFloat(match[1]),
+    s: parseFloat(match[2]) / 100,
+    l: parseFloat(match[3]) / 100,
+  };
+}
+
+function readThemeHex(root: Element, varName: string, fallback: number) {
+  const raw = getComputedStyle(root).getPropertyValue(varName).trim();
+  const hsl = parseHslTriplet(raw);
+  if (!hsl) return fallback;
+  return new THREE.Color().setHSL(hsl.h / 360, hsl.s, hsl.l).getHex();
+}
 
 type Streak = {
   progress: number;
@@ -73,6 +92,16 @@ export function QuiverCanvas({ className }: QuiverCanvasProps) {
 
     if (staticRef.current) staticRef.current.style.display = "none";
     container.style.display = "block";
+
+    const themeRoot = container.closest(".quiver-dark") ?? document.documentElement;
+    const GOLD = readThemeHex(themeRoot, "--primary", FALLBACK.primary);
+    const PALE_GOLD = readThemeHex(
+      themeRoot,
+      "--accent-foreground",
+      FALLBACK.accent,
+    );
+    const SIGNAL_GREEN = readThemeHex(themeRoot, "--signal", FALLBACK.signal);
+    const INK = readThemeHex(themeRoot, "--background", FALLBACK.background);
 
     let width = container.clientWidth;
     let height = container.clientHeight;

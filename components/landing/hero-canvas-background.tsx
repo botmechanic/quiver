@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { cn } from "@/lib/utils";
 
 const QuiverCanvas = dynamic(
   () =>
@@ -9,17 +10,21 @@ const QuiverCanvas = dynamic(
     ssr: false,
     loading: () => (
       <div
-        className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent-foreground/5"
+        className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent"
         aria-hidden
       />
     ),
   },
 );
 
-export function HeroCanvasBackground() {
+type HeroCanvasBackgroundProps = {
+  className?: string;
+};
+
+export function HeroCanvasBackground({ className }: HeroCanvasBackgroundProps) {
   return (
-    <div className="pointer-events-none absolute inset-0 h-full min-h-[420px] sm:min-h-[520px]">
-      <QuiverCanvas className="h-full w-full" />
+    <div className={cn("relative min-h-[280px] w-full", className)}>
+      <QuiverCanvas className="absolute inset-0 h-full w-full" />
     </div>
   );
 }
