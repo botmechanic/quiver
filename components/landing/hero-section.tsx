@@ -1,14 +1,12 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { QuiverLogo } from "@/components/landing/quiver-logo";
+import { HeroCanvasBackground } from "@/components/landing/hero-canvas-background";
 
 export function HeroSection() {
   return (
     <section className="relative overflow-hidden border-b border-border/40">
-      <div
-        className="pointer-events-none absolute inset-0 min-h-[420px] bg-gradient-to-br from-primary/5 via-transparent to-accent-foreground/5 sm:min-h-[520px]"
-        aria-hidden
-      />
+      <HeroCanvasBackground />
 
       <div className="relative mx-auto grid max-w-6xl gap-10 px-4 py-16 sm:px-6 sm:py-24 lg:grid-cols-[1fr_auto] lg:items-center lg:gap-16">
         <div className="max-w-2xl">
