@@ -142,6 +142,8 @@
     border-color: hsl(var(--signal));
   }
   .font-display {
-    font-family: var(--font-display), var(--font-geist-sans), system-ui, sans-serif;
+    font-family: var(--font-geist-sans), system-ui, sans-serif;
+    font-weight: 600;
+    letter-spacing: -0.02em;
   }
 }

@@ -16,23 +16,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { Instrument_Serif } from "next/font/google";
-
-const displaySerif = Instrument_Serif({
-  weight: "400",
-  subsets: ["latin"],
-  variable: "--font-display",
-  display: "swap",
-});
-
 export default function PublicLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  return (
-    <div className={`quiver-dark min-h-screen ${displaySerif.variable}`}>
-      {children}
-    </div>
-  );
+  return <div className="quiver-dark min-h-screen">{children}</div>;
 }
