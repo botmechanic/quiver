@@ -76,7 +76,6 @@ async function pollVerifiedTickCount(
 export function StreamMeterPanel() {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [running, setRunning] = useState(false);
-  const [localTicks, setLocalTicks] = useState(0);
   const [startedAt, setStartedAt] = useState<number | null>(null);
   const [durationSec, setDurationSec] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -144,9 +143,9 @@ export function StreamMeterPanel() {
     [],
   );
 
-  const resolvedVerifiedTicks = useCallback(() => {
-    return Math.max(tickRef.current, dbTickRef.current, localTicks);
-  }, [localTicks]);
+  const resolvedDbTickCount = useCallback(() => {
+    return Math.max(dbTickRef.current, tickCount);
+  }, [tickCount]);
 
   const closeSession = useCallback(
     async (sid: string, reason: CloseReason, detail?: string) => {
@@ -156,7 +155,7 @@ export function StreamMeterPanel() {
 
       const verifiedTickCount = await pollVerifiedTickCount(
         sid,
-        Math.max(tickRef.current, dbTickRef.current, localTicks),
+        resolvedDbTickCount(),
       );
 
       try {
@@ -195,24 +194,14 @@ export function StreamMeterPanel() {
           setError(data.message ?? data.error ?? detail ?? "Stop failed");
         }
       } catch {
-        const fallback = Math.max(
-          verifiedTickCount,
-          resolvedVerifiedTicks(),
-          tickCount,
-        );
+        const fallback = Math.max(verifiedTickCount, resolvedDbTickCount());
         setStopSummary(buildLocalStopSummary(fallback, reason));
         if (detail) setError(detail);
       } finally {
         stoppingRef.current = false;
       }
     },
-    [
-      haltLoop,
-      buildLocalStopSummary,
-      resolvedVerifiedTicks,
-      localTicks,
-      tickCount,
-    ],
+    [haltLoop, buildLocalStopSummary, resolvedDbTickCount, tickCount],
   );
 
   const stopStream = useCallback(async () => {
@@ -254,7 +243,6 @@ export function StreamMeterPanel() {
         }
 
         tickRef.current = nextTick;
-        setLocalTicks(nextTick);
         setError(null);
         setFailClosed(false);
       } catch (err) {
@@ -294,7 +282,6 @@ export function StreamMeterPanel() {
     setError(null);
     setStopSummary(null);
     setFailClosed(false);
-    setLocalTicks(0);
     tickRef.current = 0;
     setDurationSec(0);
 
@@ -340,17 +327,12 @@ export function StreamMeterPanel() {
     });
   }, [tickCount, sessionId, running]);
 
-  const displayTicks = Math.max(
-    tickCount,
-    localTicks,
-    tickRef.current,
-    stopSummary?.tick_count ?? 0,
-  );
-  const displayTotal = Math.max(
-    parseFloat(cumulativeUsdc || "0"),
-    localTicks * STREAM_RATE_USDC,
-    parseFloat(stopSummary?.authorized_total_usdc ?? "0"),
-  );
+  const displayTicks =
+    stopSummary !== null ? stopSummary.tick_count : tickCount;
+  const displayTotal =
+    stopSummary !== null
+      ? parseFloat(stopSummary.authorized_total_usdc)
+      : parseFloat(cumulativeUsdc || "0");
   const displayExpected = Number(
     (displayTicks * STREAM_RATE_USDC).toFixed(6),
   );
@@ -361,7 +343,10 @@ export function StreamMeterPanel() {
     stopSummary !== null || (!running && displayTicks > 0);
   const closeLabel =
     stopSummary?.reason != null
-      ? streamCloseLabel(stopSummary.reason as CloseReason, displayTicks)
+      ? streamCloseLabel(
+          stopSummary.reason as CloseReason,
+          stopSummary.tick_count,
+        )
       : null;
 
   return (
