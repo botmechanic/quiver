@@ -16,3 +16,12 @@ export function formatUsdcTotal(events: { amount_usdc: string }[]): string {
   );
   return total.toFixed(6);
 }
+
+export function formatUsdcAverage(events: { amount_usdc: string }[]): string {
+  if (events.length === 0) return "0.000000";
+  const total = events.reduce(
+    (sum, event) => sum + parseFloat(event.amount_usdc || "0"),
+    0,
+  );
+  return (total / events.length).toFixed(6);
+}

@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { Loader2 } from "lucide-react";
 import { usePaymentEvents } from "@/hooks/use-transactions";
 import {
+  formatUsdcAverage,
   formatUsdcTotal,
   getPaymentSource,
 } from "@/lib/payments";
@@ -32,25 +33,42 @@ function ProofStat({
   );
 }
 
-/** Live counters from payment_events — demo and Scout reported separately. */
+function ProofStripStub() {
+  return (
+    <section className="border-b border-border/25 py-16 sm:py-20 lg:py-24">
+      <div className="mx-auto max-w-5xl px-5 sm:px-8">
+        <p className="text-sm text-muted-foreground">
+          No settlements recorded yet —{" "}
+          <a href="/try" className="text-primary hover:underline">
+            trigger the first demo buy
+          </a>
+          .
+        </p>
+      </div>
+    </section>
+  );
+}
+
+/**
+ * Live counters from payment_events — demo and Scout reported separately.
+ * Reads via anon/publishable key; RLS policy "Allow public read access" (select using true).
+ */
 export function ProofStrip() {
   const { events, loading } = usePaymentEvents();
 
   const stats = useMemo(() => {
     const demo = events.filter((ev) => getPaymentSource(ev) === "demo");
     const scout = events.filter((ev) => getPaymentSource(ev) === "scout");
-    const allAmounts = events.map((ev) => parseFloat(ev.amount_usdc || "0"));
-    const avg =
-      allAmounts.length > 0
-        ? allAmounts.reduce((a, b) => a + b, 0) / allAmounts.length
-        : 0;
+    const scoutPayers = new Set(scout.map((ev) => ev.payer.toLowerCase()));
 
     return {
       demoCount: demo.length,
       scoutCount: scout.length,
-      avgSize: avg.toFixed(6),
       demoVolume: formatUsdcTotal(demo),
       scoutVolume: formatUsdcTotal(scout),
+      avgDemo: formatUsdcAverage(demo),
+      avgScout: formatUsdcAverage(scout),
+      scoutPayers: scoutPayers.size,
     };
   }, [events]);
 
@@ -66,19 +84,7 @@ export function ProofStrip() {
   }
 
   if (events.length === 0) {
-    return (
-      <section className="border-b border-border/25 py-16">
-        <div className="mx-auto max-w-5xl px-5 sm:px-8">
-          <p className="text-sm text-muted-foreground">
-            No settlements recorded yet —{" "}
-            <a href="/try" className="text-primary hover:underline">
-              trigger the first demo buy
-            </a>
-            .
-          </p>
-        </div>
-      </section>
-    );
+    return <ProofStripStub />;
   }
 
   return (
@@ -97,17 +103,17 @@ export function ProofStrip() {
           <ProofStat
             label="Demo settlements"
             value={String(stats.demoCount)}
-            detail={`$${stats.demoVolume} USDC — funder-funded /try clicks`}
+            detail={`$${stats.demoVolume} USDC — funder-funded /try clicks (avg $${stats.avgDemo})`}
           />
           <ProofStat
             label="Scout payments"
             value={String(stats.scoutCount)}
-            detail={`$${stats.scoutVolume} USDC — agent buyer runs`}
+            detail={`$${stats.scoutVolume} USDC — agent buyer runs (avg $${stats.avgScout})`}
           />
           <ProofStat
-            label="Avg transaction"
-            value={`$${stats.avgSize}`}
-            detail="Sub-cent target across all sources"
+            label="Distinct Scout payers"
+            value={String(stats.scoutPayers)}
+            detail="Ephemeral wallets from Scout runs — demo excluded"
           />
           <ProofStat
             label="Total events"
