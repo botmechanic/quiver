@@ -27,8 +27,8 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen flex flex-col">
-      <header className="border-b">
+    <div className="quiver-dark flex min-h-screen flex-col">
+      <header className="border-b border-border">
         <div className="flex items-center justify-between gap-3 px-4 py-3 sm:px-6">
           <TopBarGatewayControls />
           <form action={logout}>

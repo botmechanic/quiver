@@ -21,9 +21,9 @@ function StatCard({
 }) {
   const valueClass =
     accent === "green"
-      ? "text-[#3FB950]"
+      ? "text-signal"
       : accent === "gold"
-        ? "text-[#E8C766]"
+        ? "text-accent-foreground"
         : "";
 
   return (

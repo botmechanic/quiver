@@ -404,9 +404,9 @@ export default function Dashboard() {
                           }
                           className={
                             getPaymentSource(ev) === "demo"
-                              ? "border-[#D4AF37] text-[#7A5C1E]"
+                              ? "border-primary text-muted-foreground"
                               : getPaymentSource(ev) === "stream"
-                                ? "bg-[#3FB950]/20 text-[#3FB950] border-[#3FB950]/40"
+                                ? "bg-signal/20 text-signal border-signal/40"
                                 : undefined
                           }
                         >
