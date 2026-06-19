@@ -128,11 +128,6 @@ export function QuiverCanvas({ className }: QuiverCanvasProps) {
       transparent: true,
       opacity: 0.55,
     });
-    const greenMat = new THREE.MeshBasicMaterial({
-      color: SIGNAL_GREEN,
-      transparent: true,
-      opacity: 0.85,
-    });
 
     const meshes: THREE.Mesh[] = [];
     const streaks = initStreaks();
@@ -259,7 +254,6 @@ export function QuiverCanvas({ className }: QuiverCanvasProps) {
       streakGeom.dispose();
       originGeom.dispose();
       goldMat.dispose();
-      greenMat.dispose();
       meshes.forEach((m) => {
         (m.material as THREE.Material).dispose();
       });

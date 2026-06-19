@@ -9,7 +9,7 @@ const STEPS = [
     step: "02",
     title: "Scout decides",
     body: "Scout reads the quoted price and confidence, compares against its remaining budget, and buys or declines with a logged reason.",
-    mechanic: "Two-gate policy: confidence ≥ 0.45, price ≤ budget × confidence",
+    mechanic: "Two-gate policy: confidence ≥ 0.45, price ≤ confidence × remaining budget",
   },
   {
     step: "03",
