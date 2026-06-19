@@ -11,16 +11,16 @@ export function ScoutDecisionsPanel() {
   const declines = decisions.filter((d) => d.action === "decline").length;
 
   return (
-    <section className="rounded-xl border border-[#D4AF37]/40 bg-[#0B0B0D] p-6 text-[#EDE6D6] shadow-lg">
+    <section className="rounded-xl border border-primary/40 bg-card p-6 text-foreground shadow-lg">
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="text-xs uppercase tracking-[0.2em] text-[#D4AF37]">
+          <p className="text-xs uppercase tracking-[0.2em] text-primary">
             Scout agent
           </p>
-          <h2 className="mt-2 text-xl font-semibold text-[#E8C766]">
+          <h2 className="mt-2 text-xl font-semibold text-accent-foreground">
             Buy / decline decisions
           </h2>
-          <p className="mt-2 max-w-xl text-sm text-[#EDE6D6]/80">
+          <p className="mt-2 max-w-xl text-sm text-muted-foreground">
             Each row is a Scout choice against Archer&apos;s quoted price and
             confidence — declines are first-class. Settlements still land in
             Payments when Scout buys.
@@ -28,10 +28,10 @@ export function ScoutDecisionsPanel() {
         </div>
         {decisions.length > 0 && (
           <div className="flex gap-2">
-            <Badge className="bg-[#3FB950]/20 text-[#3FB950] border-[#3FB950]/50">
+            <Badge className="border-signal/50 bg-signal/20 text-signal">
               {buys} bought
             </Badge>
-            <Badge className="bg-[#D4AF37]/20 text-[#E8C766] border-[#D4AF37]/50">
+            <Badge className="border-primary/50 bg-primary/20 text-accent-foreground">
               {declines} declined
             </Badge>
           </div>
@@ -39,40 +39,40 @@ export function ScoutDecisionsPanel() {
       </div>
 
       {loading ? (
-        <p className="flex items-center gap-2 text-sm text-[#EDE6D6]/60">
+        <p className="flex items-center gap-2 text-sm text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin" />
           Connecting to Scout decisions…
         </p>
       ) : decisions.length === 0 ? (
-        <p className="rounded-lg border border-[#7A5C1E]/30 bg-black/30 px-4 py-6 text-sm text-[#EDE6D6]/60">
+        <p className="rounded-lg border border-border/40 bg-muted/30 px-4 py-6 text-sm text-muted-foreground">
           No Scout decisions yet. Run{" "}
-          <code className="font-mono text-[#E8C766]">npm run agent</code> against
-          deployed Archer — declines and buys appear here in real time.
+          <code className="font-mono text-accent-foreground">npm run agent</code>{" "}
+          against deployed Archer — declines and buys appear here in real time.
         </p>
       ) : (
-        <div className="max-h-48 overflow-y-auto rounded-md border border-[#7A5C1E]/30 bg-black/30 px-3 py-2 font-mono text-xs">
+        <div className="max-h-48 overflow-y-auto rounded-md border border-border/40 bg-muted/30 px-3 py-2 font-mono text-xs">
           {decisions.slice(-12).map((d) => (
             <div
               key={d.id}
-              className="border-b border-[#7A5C1E]/20 py-2 last:border-0"
+              className="border-b border-border/30 py-2 last:border-0"
             >
               <div className="flex flex-wrap items-center gap-2">
                 <span
                   className={
                     d.action === "buy"
-                      ? "text-[#3FB950] font-semibold"
-                      : "text-[#E8C766] font-semibold"
+                      ? "font-semibold text-signal"
+                      : "font-semibold text-accent-foreground"
                   }
                 >
                   {d.action === "buy" ? "BOUGHT" : "DECLINED"}
                 </span>
-                <span className="text-[#EDE6D6]/90">{d.endpoint}</span>
-                <span className="text-[#EDE6D6]/50">
+                <span className="text-foreground/90">{d.endpoint}</span>
+                <span className="text-muted-foreground">
                   conf {Number(d.confidence).toFixed(2)} · $
                   {d.price_usdc}
                 </span>
               </div>
-              <p className="mt-1 text-[#EDE6D6]/75">{d.reason}</p>
+              <p className="mt-1 text-muted-foreground">{d.reason}</p>
             </div>
           ))}
         </div>

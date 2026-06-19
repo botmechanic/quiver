@@ -350,61 +350,61 @@ export function StreamMeterPanel() {
       : null;
 
   return (
-    <section className="rounded-xl border border-[#3FB950]/40 bg-[#0B0B0D] p-6 text-[#EDE6D6] shadow-lg">
+    <section className="rounded-xl border border-signal/40 bg-card p-6 text-foreground shadow-lg">
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="text-xs uppercase tracking-[0.2em] text-[#3FB950]">
+          <p className="text-xs uppercase tracking-[0.2em] text-signal">
             Live stream
           </p>
-          <h2 className="mt-2 text-xl font-semibold text-[#E8C766]">
+          <h2 className="mt-2 text-xl font-semibold text-accent-foreground">
             Pay-per-second Archer feed
           </h2>
-          <p className="mt-2 max-w-xl text-sm text-[#EDE6D6]/80">
+          <p className="mt-2 max-w-xl text-sm text-muted-foreground">
             Each second signs one EIP-3009 authorization (~$
             {STREAM_RATE_USDC.toFixed(4)}/s). The meter shows{" "}
-            <strong className="text-[#3FB950]">authorized / verified</strong>{" "}
+            <strong className="text-signal">authorized / verified</strong>{" "}
             volume — settlement batches later on Arc.
           </p>
         </div>
         {running && (
-          <Badge className="bg-[#3FB950]/20 text-[#3FB950] border-[#3FB950]/50 animate-pulse">
+          <Badge className="border-signal/50 bg-signal/20 text-signal animate-pulse">
             LIVE
           </Badge>
         )}
       </div>
 
       <div className="mb-5 grid gap-3 sm:grid-cols-3">
-        <div className="rounded-lg border border-[#7A5C1E]/40 bg-black/40 p-4">
-          <p className="text-xs uppercase tracking-wide text-[#EDE6D6]/60">
+        <div className="rounded-lg border border-border/40 bg-muted/30 p-4">
+          <p className="text-xs uppercase tracking-wide text-muted-foreground">
             Authorized total
           </p>
-          <p className="mt-1 font-mono text-3xl font-semibold text-[#3FB950]">
+          <p className="mt-1 font-mono text-3xl font-semibold text-signal">
             ${displayTotal.toFixed(6)}
           </p>
-          <p className="mt-1 text-xs text-[#EDE6D6]/50">verified, not settled</p>
+          <p className="mt-1 text-xs text-muted-foreground">verified, not settled</p>
         </div>
-        <div className="rounded-lg border border-[#7A5C1E]/40 bg-black/40 p-4">
-          <p className="text-xs uppercase tracking-wide text-[#EDE6D6]/60">
+        <div className="rounded-lg border border-border/40 bg-muted/30 p-4">
+          <p className="text-xs uppercase tracking-wide text-muted-foreground">
             Rate
           </p>
-          <p className="mt-1 font-mono text-2xl font-semibold text-[#E8C766]">
+          <p className="mt-1 font-mono text-2xl font-semibold text-accent-foreground">
             ${STREAM_RATE_USDC.toFixed(4)}/s
           </p>
-          <p className="mt-1 text-xs text-[#EDE6D6]/50">
+          <p className="mt-1 text-xs text-muted-foreground">
             {displayTicks} tick{displayTicks !== 1 ? "s" : ""}
             {pendingTick && pendingTickNumber !== null
               ? ` · signing tick ${pendingTickNumber}… (max ${tickTimeoutMs(pendingTickNumber) / 1000}s)`
               : ""}
           </p>
         </div>
-        <div className="rounded-lg border border-[#7A5C1E]/40 bg-black/40 p-4">
-          <p className="text-xs uppercase tracking-wide text-[#EDE6D6]/60">
+        <div className="rounded-lg border border-border/40 bg-muted/30 p-4">
+          <p className="text-xs uppercase tracking-wide text-muted-foreground">
             Session duration
           </p>
           <p className="mt-1 font-mono text-2xl font-semibold">
             {formatDuration(durationSec)}
           </p>
-          <p className="mt-1 truncate font-mono text-xs text-[#EDE6D6]/50">
+          <p className="mt-1 truncate font-mono text-xs text-muted-foreground">
             {sessionId ? sessionId.slice(0, 8) + "…" : "—"}
           </p>
         </div>
@@ -414,9 +414,9 @@ export function StreamMeterPanel() {
         <div
           className={`mb-4 rounded-lg border px-4 py-3 text-sm ${
             failClosed
-              ? "border-[#D4AF37]/50 bg-[#D4AF37]/10 text-[#E8C766]"
+              ? "border-primary/50 bg-primary/10 text-accent-foreground"
               : displayInvariantHolds && stopSummary?.invariant.holds !== false
-                ? "border-[#3FB950]/50 bg-[#3FB950]/10 text-[#3FB950]"
+                ? "border-signal/50 bg-signal/10 text-signal"
                 : "border-red-500/50 bg-red-950/30 text-red-200"
           }`}
         >
@@ -446,7 +446,7 @@ export function StreamMeterPanel() {
             type="button"
             onClick={() => void startStream()}
             disabled={loading}
-            className="bg-[#3FB950] text-[#0B0B0D] hover:bg-[#3FB950]/90 font-semibold"
+            className="bg-signal font-semibold text-background hover:bg-signal/90"
           >
             {loading ? (
               <>
@@ -462,7 +462,7 @@ export function StreamMeterPanel() {
             type="button"
             onClick={() => void stopStream()}
             variant="outline"
-            className="border-[#D4AF37] text-[#E8C766] hover:bg-[#D4AF37]/10"
+            className="border-primary text-accent-foreground hover:bg-primary/10"
           >
             <Square className="mr-2 h-4 w-4 fill-current" />
             Stop stream
@@ -477,12 +477,12 @@ export function StreamMeterPanel() {
       )}
 
       {events.length > 0 && (
-        <div className="mt-4 max-h-32 overflow-y-auto rounded-md border border-[#7A5C1E]/30 bg-black/30 px-3 py-2 font-mono text-xs text-[#EDE6D6]/70">
+        <div className="mt-4 max-h-32 overflow-y-auto rounded-md border border-border/30 bg-muted/30 px-3 py-2 font-mono text-xs text-muted-foreground">
           {events.slice(-8).map((ev) => (
             <div key={ev.id} className="flex justify-between gap-4 py-0.5">
               <span>
                 tick {ev.tick_number}{" "}
-                <span className="text-[#3FB950]">{ev.status}</span>
+                <span className="text-signal">{ev.status}</span>
               </span>
               <span>${ev.cumulative_usdc} cum</span>
             </div>
