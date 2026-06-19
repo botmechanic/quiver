@@ -44,6 +44,8 @@
   --chart-3: 150.98 75.41% 47.84%;
   --chart-4: 21.9 100% 73.14%;
   --chart-5: 294.95 88.43% 76.27%;
+  --signal: 131 49% 48%;
+  --live: 131 49% 48%;
   --radius: 0.5rem;
 }
 
@@ -72,6 +74,8 @@
   --color-chart-3: hsl(var(--chart-3));
   --color-chart-4: hsl(var(--chart-4));
   --color-chart-5: hsl(var(--chart-5));
+  --color-signal: hsl(var(--signal));
+  --color-live: hsl(var(--live));
   --radius-lg: var(--radius);
   --radius-md: calc(var(--radius) - 2px);
   --radius-sm: calc(var(--radius) - 4px);
@@ -84,10 +88,53 @@
   body {
     @apply bg-background text-foreground;
   }
+}
 
-  /* Quiver public pages use Struck Coin palette on the page shell */
-  .quiver-public {
-    background-color: #0b0b0d;
-    color: #ede6d6;
+/* Struck Coin — Quiver dark theme (scoped via .quiver-dark or legacy .quiver-public) */
+.quiver-dark,
+.quiver-public {
+  --background: 240 8% 5%;
+  --foreground: 42 33% 88%;
+  --card: 240 6% 7%;
+  --card-foreground: 42 33% 88%;
+  --popover: 240 6% 7%;
+  --popover-foreground: 42 33% 88%;
+  --primary: 46 66% 52%;
+  --primary-foreground: 240 8% 5%;
+  --secondary: 42 30% 12%;
+  --secondary-foreground: 42 33% 88%;
+  --muted: 42 25% 14%;
+  --muted-foreground: 42 15% 62%;
+  --accent: 45 40% 16%;
+  --accent-foreground: 45 75% 66%;
+  --destructive: 0 62% 45%;
+  --destructive-foreground: 42 33% 88%;
+  --border: 42 62% 30%;
+  --input: 42 62% 30%;
+  --ring: 45 75% 66%;
+  --signal: 131 49% 48%;
+  --live: 131 49% 48%;
+  --chart-1: 46 66% 52%;
+  --chart-2: 45 75% 66%;
+  --chart-3: 131 49% 48%;
+  --chart-4: 42 62% 30%;
+  --chart-5: 42 33% 88%;
+
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+}
+
+@layer utilities {
+  .text-signal {
+    color: hsl(var(--signal));
+  }
+  .bg-signal {
+    background-color: hsl(var(--signal));
+  }
+  .border-signal {
+    border-color: hsl(var(--signal));
+  }
+  .font-display {
+    font-family: var(--font-display), var(--font-geist-sans), system-ui, sans-serif;
   }
 }

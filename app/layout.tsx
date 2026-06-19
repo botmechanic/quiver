@@ -45,7 +45,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${geistSans.className} antialiased`}>
+      <body className={`${geistSans.variable} ${geistSans.className} antialiased`}>
         <TooltipProvider>{children}</TooltipProvider>
         <Toaster richColors position="bottom-right" />
       </body>

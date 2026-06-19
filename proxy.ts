@@ -34,12 +34,17 @@ export function proxy(request: NextRequest) {
 
   // Logged-out user trying to access protected routes -> redirect to sign-in
   if (pathname.startsWith("/dashboard") && session !== "authenticated") {
-    return NextResponse.redirect(new URL("/", request.url));
+    return NextResponse.redirect(new URL("/login", request.url));
+  }
+
+  // Logged-in user on login -> dashboard
+  if (pathname === "/login" && session === "authenticated") {
+    return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: ["/", "/try", "/dashboard/:path*"],
+  matcher: ["/", "/try", "/login", "/dashboard/:path*"],
 };
