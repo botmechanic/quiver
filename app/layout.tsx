@@ -20,16 +20,50 @@ import type { Metadata } from "next";
 import { Geist } from "next/font/google";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "sonner";
+import {
+  getSiteUrl,
+  siteDescription,
+  siteKeywords,
+  siteName,
+} from "@/lib/site-metadata";
 import "./globals.css";
 
-const defaultUrl = process.env.VERCEL_URL
-  ? `https://${process.env.VERCEL_URL}`
-  : "http://localhost:3000";
+const siteUrl = getSiteUrl();
 
 export const metadata: Metadata = {
-  metadataBase: new URL(defaultUrl),
-  title: "Quiver",
-  description: "Agentic nanopayments over x402 on Arc",
+  metadataBase: siteUrl,
+  title: {
+    default: siteName,
+    template: `%s · ${siteName}`,
+  },
+  description: siteDescription,
+  keywords: siteKeywords,
+  applicationName: siteName,
+  authors: [{ name: "Quiver", url: siteUrl.href }],
+  creator: "Quiver",
+  publisher: siteName,
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: { index: true, follow: true },
+  },
+  openGraph: {
+    type: "website",
+    locale: "en_US",
+    url: siteUrl.href,
+    siteName,
+    title: siteName,
+    description: siteDescription,
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: siteName,
+    description: siteDescription,
+  },
+  alternates: {
+    canonical: siteUrl.href,
+  },
+  category: "technology",
 };
 
 const geistSans = Geist({
