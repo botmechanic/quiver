@@ -93,31 +93,38 @@
 /* Struck Coin — Quiver dark theme (scoped via .quiver-dark or legacy .quiver-public) */
 .quiver-dark,
 .quiver-public {
+  /* Ink Black #0B0B0D */
   --background: 240 8% 5%;
+  /* Bone #EDE6D6 */
   --foreground: 42 33% 88%;
-  --card: 240 6% 7%;
+  /* Ink +2% lightness — no hue shift */
+  --card: 240 8% 7%;
   --card-foreground: 42 33% 88%;
-  --popover: 240 6% 7%;
+  --popover: 240 8% 7%;
   --popover-foreground: 42 33% 88%;
+  /* Struck Gold #D4AF37 */
   --primary: 46 66% 52%;
   --primary-foreground: 240 8% 5%;
-  --secondary: 42 30% 12%;
+  --secondary: 240 8% 10%;
   --secondary-foreground: 42 33% 88%;
-  --muted: 42 25% 14%;
-  --muted-foreground: 42 15% 62%;
-  --accent: 45 40% 16%;
+  --muted: 240 8% 10%;
+  --muted-foreground: 42 18% 58%;
+  --accent: 240 8% 12%;
+  /* Pale Gold #E8C766 */
   --accent-foreground: 45 75% 66%;
   --destructive: 0 62% 45%;
   --destructive-foreground: 42 33% 88%;
-  --border: 42 62% 30%;
-  --input: 42 62% 30%;
+  /* Bronze Shadow #7A5C1E — use at /25–/40 opacity in components */
+  --border: 42 61% 30%;
+  --input: 42 61% 30%;
   --ring: 45 75% 66%;
-  --signal: 131 49% 48%;
-  --live: 131 49% 48%;
+  /* Signal Green #3FB950 — live/verified only */
+  --signal: 131 49% 49%;
+  --live: 131 49% 49%;
   --chart-1: 46 66% 52%;
   --chart-2: 45 75% 66%;
-  --chart-3: 131 49% 48%;
-  --chart-4: 42 62% 30%;
+  --chart-3: 131 49% 49%;
+  --chart-4: 42 61% 30%;
   --chart-5: 42 33% 88%;
 
   background-color: hsl(var(--background));
