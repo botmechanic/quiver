@@ -31,12 +31,9 @@ export function LandingNav() {
           : "border-b border-transparent bg-transparent",
       )}
     >
-      <div className="mx-auto flex max-w-5xl items-center justify-between gap-6 px-5 py-4 sm:px-8 sm:py-5">
+      <div className="mx-auto flex max-w-5xl items-center justify-between gap-6 px-5 py-3 sm:px-8 sm:py-4">
         <Link href="/" className="shrink-0" aria-label="Quiver home">
-          <QuiverLogo
-            priority
-            className="h-7 w-auto sm:h-8 md:h-10 lg:h-11"
-          />
+          <QuiverLogo priority className="h-9 w-auto sm:h-10" />
         </Link>
 
         <nav className="flex items-center gap-5 sm:gap-7">
