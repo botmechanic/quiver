@@ -3,7 +3,9 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, shortenHash } from "@/lib/utils";
+
+const EXPLORER_BASE = "https://testnet.arcscan.app";
 
 interface DemoBuyResponse {
   demo: true;
@@ -86,6 +88,10 @@ export function TryQuiverPanel({
   const elapsedSec = result
     ? (result.settlement.elapsed_ms / 1000).toFixed(2)
     : null;
+  const transactionHref =
+    result?.settlement.transaction?.startsWith("0x")
+      ? `${EXPLORER_BASE}/tx/${result.settlement.transaction}`
+      : null;
 
   const isCompact = variant === "compact";
 
@@ -115,6 +121,7 @@ export function TryQuiverPanel({
           <strong className="font-medium text-foreground">demo-funded</strong>{" "}
           real x402 payment from Quiver&apos;s funder wallet. It settles on Arc
           like Scout — but counts as a demo buy, not a distinct paying visitor.
+          Public demo spending is rate-limited.
         </p>
       </div>
 
@@ -147,7 +154,27 @@ export function TryQuiverPanel({
             Settled — Archer sold a signal for ${result.settlement.amount_usdc}{" "}
             USDC in {elapsedSec}s
           </p>
+          <p className="text-xs leading-relaxed text-muted-foreground">
+            Quiver funded an ephemeral payer, retried Archer&apos;s x402 402
+            quote with a Circle Gateway authorization, and recorded the result
+            as a demo buy.
+          </p>
           <dl className="grid gap-2 text-sm">
+            {transactionHref && (
+              <div className="flex justify-between gap-4">
+                <dt className="text-muted-foreground">Arcscan proof</dt>
+                <dd className="font-mono">
+                  <a
+                    href={transactionHref}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary underline-offset-4 hover:underline"
+                  >
+                    {shortenHash(result.settlement.transaction, 6)}
+                  </a>
+                </dd>
+              </div>
+            )}
             <div className="flex justify-between gap-4">
               <dt className="text-muted-foreground">Decision</dt>
               <dd className="font-mono uppercase">{signal.decision}</dd>

@@ -25,13 +25,8 @@ export function useStreamEvents(sessionId: string | null) {
 
   useEffect(() => {
     if (!sessionId) {
-      setEvents([]);
-      setLoading(false);
       return;
     }
-
-    setEvents([]);
-    setLoading(true);
 
     const supabase = createClient();
 
@@ -74,6 +69,7 @@ export function useStreamEvents(sessionId: string | null) {
       )
       .subscribe((status) => {
         if (status === "SUBSCRIBED") {
+          setLoading(true);
           fetchInitial();
         }
       });
@@ -85,11 +81,15 @@ export function useStreamEvents(sessionId: string | null) {
     };
   }, [sessionId]);
 
-  const latest = events.length > 0 ? events[events.length - 1] : null;
+  const activeEvents = sessionId
+    ? events.filter((event) => event.session_id === sessionId)
+    : [];
+  const latest =
+    activeEvents.length > 0 ? activeEvents[activeEvents.length - 1] : null;
 
   return {
-    events,
-    loading,
+    events: activeEvents,
+    loading: sessionId ? loading : false,
     latest,
     tickCount: latest?.tick_number ?? 0,
     cumulativeUsdc: latest?.cumulative_usdc ?? "0.000000",

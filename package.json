@@ -9,6 +9,7 @@
     "agent": "node --experimental-transform-types --no-warnings --env-file=.env.local agent.mts",
     "stream": "node --experimental-transform-types --no-warnings --env-file=.env.local stream.mts",
     "spike:overlapping-auth": "node --experimental-transform-types --no-warnings --env-file=.env.local scripts/spike-overlapping-auth.mts",
+    "verify:stream-schema": "node --experimental-transform-types --no-warnings --env-file=.env.local scripts/verify-stream-schema.mts",
     "verify:stream-realtime": "node --experimental-transform-types --no-warnings --env-file=.env.local scripts/verify-stream-realtime.mts",
     "verify:scout-decisions": "node --experimental-transform-types --no-warnings --env-file=.env.local scripts/verify-scout-decisions-realtime.mts"
   },

@@ -1,7 +1,7 @@
 # Quiver — Product Requirements Document
 
 > **Status:** Draft v1 · Lepton Agents Hackathon (Canteen × Circle) · June 15–29, 2026  
-> **Implementation (Jun 18):** v0 deployed · dynamic pricing · Scout buy/decline · `/try` demo path · **streaming loop + dashboard meter (days 7–8)** · days 9–10 hardening not started  
+> **Implementation (Jun 22):** v0 deployed · dynamic pricing · Scout buy/decline · `/try` demo path · **streaming loop + dashboard meter shipped** · partial stream hardening shipped (timeouts, fail-closed UI, verified-count reconciliation)  
 > **Schedule:** see `docs/ROADMAP.md`
 > **One-liner:** Two AI agents that earn and spend real money — fractions of a cent at a time — over x402 on Arc, with the headline feature being **true pay-per-second streaming**.
 
@@ -80,7 +80,7 @@ Visitors at **`/try`** cannot sign EIP-3009 authorizations. The demo path is **h
 - **`POST /api/demo/buy`** runs funder → ephemeral → Gateway → Archer server-side (same flow as Scout).
 - Produces a **real** x402 settlement visible on the dashboard.
 - Recorded as `payment_events.raw.source = 'demo'` — **not** a distinct paying visitor.
-- Rate-limited per IP (`DEMO_RATE_LIMIT_SECONDS`, default 30s) — mandatory; public button spends real testnet USDC from the funder.
+- Rate-limited per IP (`DEMO_RATE_LIMIT_SECONDS`, default 30s) — mandatory; public button spends real testnet USDC from the funder. Current guardrail is in-memory/per-instance and acceptable for the testnet demo, not production abuse prevention.
 - **Traction reporting:** "N demo buys" and "M Scout payments" are separate, defensible metrics.
 
 **Out of scope for this block:** wallet-connect / visitor-funded payments (Option B) — stretch only after streaming if time allows.
@@ -103,7 +103,7 @@ One Archer instance sells; one Scout instance buys on a budget; both settle sub-
 ### 4.7 Live dashboard — **partial (streaming meter shipped)**
 Real-time view of money moving. Counters proven to resonate in this ecosystem: **total payments, total volume (USDC), distinct paying clients, average transaction size (target sub-cent).** Plus the live streaming meter (cumulative authorized total ticking up, rate readout, session duration). Powered by Supabase real-time subscriptions over `stream_events` and `payment_events`.
 
-**Shipped:** payments table with realtime inserts; **demo vs Scout vs stream split** in dashboard metrics (`payment_events.raw.source`); source badges per row; **live stream meter** on `/dashboard` (authorized/verified volume, tap-to-stop, exact-cost invariant banner). **Not shipped:** days 9–10 adversarial hardening visible in demo.
+**Shipped:** payments table with realtime inserts; **demo vs Scout vs stream split** in dashboard metrics (`payment_events.raw.source`); source badges per row; Scout buy/decline panel; **live stream meter** on `/dashboard` (authorized/verified volume, tap-to-stop, exact-cost invariant banner); partial adversarial hardening for hung ticks, fail-closed close, and verified `stream_events` tick-count reconciliation. **Not shipped:** out-of-balance mid-stream and abandoned-session zombie prevention.
 
 ---
 

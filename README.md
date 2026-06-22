@@ -127,7 +127,7 @@ Public page: **`/try`** — no wallet, one click.
 - Calls `POST /api/demo/buy` (default: `/api/archer/signal`).
 - Server runs the same funder → ephemeral → Gateway → Archer flow as Scout.
 - Settlements are **real** but tagged `demo` in `payment_events.raw.source` — not counted as distinct paying visitors.
-- Rate-limited per IP (`DEMO_RATE_LIMIT_SECONDS`, default 30s) to protect the funder wallet.
+- Rate-limited per IP (`DEMO_RATE_LIMIT_SECONDS`, default 30s) to protect the funder wallet. This is an in-memory, per-instance testnet guardrail; it is honest demo protection, not production abuse prevention.
 
 Share **`https://quiver-self.vercel.app/try`** for traction outreach.
 
@@ -192,6 +192,20 @@ The dashboard shows:
 - **Live stream meter** — authorized total, rate, duration, tap-to-stop, exact-cost invariant
 - Gateway balance, withdrawals, realtime payment feed
 
+## Judge Walkthrough
+
+1. Open [https://quiver-self.vercel.app/try](https://quiver-self.vercel.app/try) and click **Buy Archer signal (demo)**.
+2. Confirm the result shows the settled USDC amount, Archer's price reason, the trace hash, and an Arcscan transaction link when a transaction hash is available.
+3. Sign in to `/dashboard` with the provided operator credentials and confirm the payment row is tagged `demo`.
+4. Start the **Pay-per-second Archer feed**, let a few ticks land, then stop it. The invariant should read `ticks × $0.0001 = total` using verified `stream_events`.
+5. Run Scout locally against production to show agentic buy/decline decisions:
+
+```bash
+BASE_URL=https://quiver-self.vercel.app npm run agent -- --limit 0.01
+```
+
+6. Use the dashboard metrics for submission numbers: report demo buys, Scout payments, stream ticks, and distinct Scout payers separately.
+
 ## Deployment
 
 Quiver deploys on Vercel with cloud Supabase.
@@ -204,6 +218,7 @@ Quiver deploys on Vercel with cloud Supabase.
    - Scout run tags payments `scout` with dynamic prices
    - Dashboard splits demo / Scout / stream metrics
    - **Stream meter** ticks up on its own when Start stream is pressed (realtime on `stream_events`)
+   - `npm run verify:stream-schema` confirms the stream tables and recent tick uniqueness
 
 Keep the funder wallet topped up (~$1 minimum; refaucet from Circle if demo volume is high).
 
@@ -233,5 +248,6 @@ Testnet hackathon project only:
 - [x] Scout per-call buy/decline logic
 - [x] Human demo path (`/try`, honestly tagged)
 - [x] Pay-per-second x402 streaming (loop + dashboard meter)
-- [ ] Stream adversarial hardening (days 9–10)
+- [x] Partial stream adversarial hardening (timeouts, fail-closed UI, verified-count reconciliation)
+- [ ] Stream hardening stretch: out-of-balance and abandoned-session cleanup
 - [ ] Visitor pays with own wallet (stretch, post-streaming if time)

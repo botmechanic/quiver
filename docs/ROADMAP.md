@@ -2,8 +2,8 @@
 
 > Companion to `docs/PRD.md`. The PRD is the **what & why**; this is the **what's-done & what's-next** schedule.
 > **Event:** Lepton Agents Hackathon (Canteen × Circle) · June 15–29, 2026 · Final submission before **June 29**.
-> **Headline:** true pay-per-second streaming over x402 on Arc — **loop + dashboard meter shipped (Jun 18)**; hardening + polish remain.
-> **Last updated:** June 18, 2026 — update the status column when something ships or deploys.
+> **Headline:** true pay-per-second streaming over x402 on Arc — **loop + dashboard meter shipped (Jun 18)**; hardening + submission polish remain.
+> **Last updated:** June 22, 2026 — update the status column when something ships or deploys.
 
 ---
 
@@ -16,10 +16,10 @@
 | 4–6a | Dynamic pricing (compute + confidence) + Scout decline logic | ✅ Done & live |
 | 4–6b | Honest human demo-buy path (`/try`) | ✅ Done & live |
 | — | **Release `/try` + start traction outreach** | ⏳ In progress |
-| 7–8 | **Pay-per-second streaming — loop + dashboard meter** | ✅ Done (local verified; deploy pending) |
-| 9–10 | Stream adversarial hardening (failed tick, out-of-balance, clean close) | ⏳ Partial — hung-tick + reconciliation shipped; out-of-balance + abandoned session deferred |
-| 11–12 | Two-sided Archer↔Scout loop + dashboard polish + optional upside | ⏳ Day 11 nearly closed — both policy gates verified; prod deployed |
-| 13–14 | Demo video, README/submission polish, final submit | ⬜ Not started |
+| 7–8 | **Pay-per-second streaming — loop + dashboard meter** | ✅ Done & live |
+| 9–10 | Stream adversarial hardening (failed tick, out-of-balance, clean close) | ⏳ Partial — hung-tick, fail-closed UI, and stream-count reconciliation shipped; out-of-balance + abandoned session deferred |
+| 11–12 | Two-sided Archer↔Scout loop + dashboard polish + optional upside | ⏳ Scout decisions + dashboard proof shipped; full unattended Archer↔Scout demo loop still operator-run |
+| 13–14 | Demo video, README/submission polish, final submit | ⏳ README judge walkthrough started |
 
 Legend: ✅ done · ⏳ in flight / pending · ⬜ not started
 
@@ -27,7 +27,7 @@ Legend: ✅ done · ⏳ in flight / pending · ⬜ not started
 
 ## Immediate next action — Release `/try` & traction outreach
 
-Blocks 4–6 are deployed to [quiver-self.vercel.app](https://quiver-self.vercel.app). Remaining gate before streaming: confirm live behavior and **ship the link**.
+Blocks 4–6 are deployed to [quiver-self.vercel.app](https://quiver-self.vercel.app). Streaming is also live; keep confirming live behavior and **ship the `/try` link** for traction.
 
 - [x] Set/confirm Vercel env vars: `BASE_URL` (**stable prod domain, not a preview URL**), `DEMO_RATE_LIMIT_SECONDS=30`, `DEMO_DEPOSIT_AMOUNT=0.01`; existing keys unchanged.
 - [x] Deploy. (No migration required — source tag lives in `payment_events.raw` as `demo` / `scout`.)
@@ -36,6 +36,7 @@ Blocks 4–6 are deployed to [quiver-self.vercel.app](https://quiver-self.vercel
   - [ ] Dashboard → row tagged `demo`, demo vs scout metrics split cleanly
   - [ ] Rapid double-click `/try` → `429` cooldown (the real funder guardrail in prod)
   - [ ] Scout run → `scout`-sourced rows with dynamic prices in the 402/reason
+  - [x] Stream meter reads verified tick counts from `stream_events` and aligns the session row on stop
   - [x] Confirm `/try` calls the **deployed** Archer endpoints, not localhost/preview
 - [ ] **Release `https://quiver-self.vercel.app/try` in the hackathon Discord + ATC/Skool.** This *is* the traction event — every demo buy from here is a real, honestly-labeled data point.
 - [ ] Submit/refresh the v0 on the hackathon form.
@@ -60,11 +61,11 @@ The one axis no prior-cohort winner occupied. Highest variance — protect this 
 **Build sequence:**
 - [x] **Day 7:** one stream session paying real per-second ticks against Archer, landing in `stream_events`.
 - [x] **Day 8:** dashboard streaming meter via Supabase real-time; **tap-to-stop** with visible invariant (*cost = ticks × rate*).
-- [x] **Days 9–10 (partial):** hung-tick timeout, fail-closed close, meter/banner reconciled to `stream_events` (verified browser + forced-409 curl, Jun 18).
+- [x] **Days 9–10 (partial):** hung-tick timeout, fail-closed close, meter/banner reconciled to `stream_events`, and align-on-`/stop` for `demo_stream_sessions.tick_count`.
 - [ ] **Days 9–10 (remaining — deferred to Day 11+ if slack):** out-of-balance mid-stream; abandoned-session zombie prevention (higher value of the two — judge may close tab mid-stream and funder keeps spending).
 
-**Deferred polish (internal, not judge-facing — revisit if Day 11 finishes with slack):**
-- Natural late-tick path can leave `demo_stream_sessions.tick_count` stale when tick N lands in `stream_events` *after* `/stop` returns (409-align in the tick route ran against an earlier snapshot; forced-curl mid-flight test does not cover this timing). Money and UI are correct because both read `verifiedStreamTickCount` / `stream_events`. Clean fix: **align-on-`/stop`** — unconditionally set session-row `tick_count` from `stream_events` at stop time, not only inside the 409 handler.
+**Shipped polish (Jun 22):**
+- Natural late-tick drift is handled by aligning `demo_stream_sessions.tick_count` from `stream_events` on `/stop`; user-facing summaries stay grounded in verified stream rows.
 
 **In parallel, all four days — traction:**
 - [ ] Keep driving demo buys / Scout activity. Track: distinct paying clients, total payments, total USDC volume, avg transaction size (sub-cent). Streaming and traction are independent — a bad day on one never blocks the other.

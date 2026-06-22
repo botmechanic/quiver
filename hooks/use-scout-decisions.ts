@@ -20,9 +20,6 @@ export function useScoutDecisions(runId: string | null) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    setDecisions([]);
-    setLoading(true);
-
     const supabase = createClient();
 
     async function fetchInitial() {
@@ -74,6 +71,7 @@ export function useScoutDecisions(runId: string | null) {
       )
       .subscribe((status) => {
         if (status === "SUBSCRIBED") {
+          setLoading(true);
           fetchInitial();
         }
       });

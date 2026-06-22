@@ -6,7 +6,10 @@ import {
   resolveDemoStreamSession,
   stopDemoStreamSession,
 } from "@/lib/demo/stream-session";
-import { verifiedStreamTickCount } from "@/lib/demo/stream-session-store";
+import {
+  alignSessionTickCountWithEvents,
+  verifiedStreamTickCount,
+} from "@/lib/demo/stream-session-store";
 import { streamCloseLabel } from "@/lib/stream/constants";
 
 export const maxDuration = 60;
@@ -45,7 +48,9 @@ export async function POST(req: NextRequest) {
 
   const session = existing ? await stopDemoStreamSession(sessionId) : null;
   const rateUsdc = getStreamRateUsdc();
-  const dbTicks = await verifiedStreamTickCount(sessionId);
+  const alignedTicks = await alignSessionTickCountWithEvents(sessionId);
+  const dbTicks =
+    alignedTicks > 0 ? alignedTicks : await verifiedStreamTickCount(sessionId);
   const tickCount = dbTicks;
   const totalUsdc = expectedStreamTotal(tickCount);
   const closeReason = (reason ?? "user") as "user" | "tick_timeout" | "tick_failed";

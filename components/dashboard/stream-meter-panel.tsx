@@ -60,15 +60,14 @@ async function fetchVerifiedTickCount(sessionId: string): Promise<number> {
 
 async function pollVerifiedTickCount(
   sessionId: string,
-  floor: number,
 ): Promise<number> {
-  let best = floor;
+  let best = 0;
   for (let attempt = 0; attempt < 6; attempt++) {
     if (attempt > 0) {
       await new Promise((r) => setTimeout(r, 500));
     }
-    best = Math.max(best, await fetchVerifiedTickCount(sessionId));
-    if (best > floor) return best;
+    const next = await fetchVerifiedTickCount(sessionId);
+    if (next >= best) best = next;
   }
   return best;
 }
@@ -89,17 +88,12 @@ export function StreamMeterPanel() {
   const [failClosed, setFailClosed] = useState(false);
 
   const tickRef = useRef(0);
-  const dbTickRef = useRef(0);
   const durationRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const stoppingRef = useRef(false);
   const runningRef = useRef(false);
 
   const { events, loading, cumulativeUsdc, tickCount } =
     useStreamEvents(sessionId);
-
-  useEffect(() => {
-    dbTickRef.current = tickCount;
-  }, [tickCount]);
 
   useEffect(() => {
     if (!running || !startedAt) return;
@@ -143,20 +137,13 @@ export function StreamMeterPanel() {
     [],
   );
 
-  const resolvedDbTickCount = useCallback(() => {
-    return Math.max(dbTickRef.current, tickCount);
-  }, [tickCount]);
-
   const closeSession = useCallback(
     async (sid: string, reason: CloseReason, detail?: string) => {
       if (stoppingRef.current && reason === "user") return;
       haltLoop();
       setFailClosed(reason !== "user");
 
-      const verifiedTickCount = await pollVerifiedTickCount(
-        sid,
-        resolvedDbTickCount(),
-      );
+      const verifiedTickCount = await pollVerifiedTickCount(sid);
 
       try {
         const res = await fetchWithTimeout(
@@ -173,13 +160,8 @@ export function StreamMeterPanel() {
           error?: string;
           message?: string;
         };
-        const reconciled = Math.max(
-          verifiedTickCount,
-          data.tick_count ?? 0,
-          tickCount,
-        );
-        const summary = buildStreamInvariant(reconciled);
         if (res.ok) {
+          const summary = buildStreamInvariant(data.tick_count ?? 0);
           setStopSummary({
             ...data,
             ...summary,
@@ -188,20 +170,20 @@ export function StreamMeterPanel() {
             session_row_missing: data.session_row_missing,
             session_tick_drift: data.session_tick_drift,
           });
-          setError(reconciled > 0 ? null : detail ?? null);
+          setError((data.tick_count ?? 0) > 0 ? null : detail ?? null);
         } else {
-          setStopSummary(buildLocalStopSummary(reconciled, reason));
+          setStopSummary(buildLocalStopSummary(verifiedTickCount, reason));
           setError(data.message ?? data.error ?? detail ?? "Stop failed");
         }
       } catch {
-        const fallback = Math.max(verifiedTickCount, resolvedDbTickCount());
+        const fallback = await pollVerifiedTickCount(sid);
         setStopSummary(buildLocalStopSummary(fallback, reason));
         if (detail) setError(detail);
       } finally {
         stoppingRef.current = false;
       }
     },
-    [haltLoop, buildLocalStopSummary, resolvedDbTickCount, tickCount],
+    [haltLoop, buildLocalStopSummary],
   );
 
   const stopStream = useCallback(async () => {
