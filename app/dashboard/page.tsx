@@ -246,9 +246,10 @@ export default function Dashboard() {
   return (
     <div className="max-w-6xl mx-auto">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold">Welcome back!</h1>
+        <h1 className="text-2xl font-bold">Quiver proof dashboard</h1>
         <p className="text-muted-foreground text-sm">
-          Monitor incoming nanopayments and manage withdrawals.
+          Watch demo buys, Scout decisions, and per-second stream ticks land as
+          separate, judge-readable proof streams.
         </p>
       </div>
 

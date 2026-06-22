@@ -79,11 +79,11 @@ export async function failDemoStreamSession(
   return session;
 }
 
-export function validateStreamTick(
+export async function validateStreamTick(
   session: DemoStreamSession,
   ip: string,
   tick: number,
-): { ok: true } | { ok: false; message: string } {
+): Promise<{ ok: true } | { ok: false; message: string }> {
   if (session.stopped) {
     return { ok: false, message: "Stream session already stopped" };
   }
@@ -92,10 +92,12 @@ export function validateStreamTick(
   }
   if (Date.now() - session.startedAt > MAX_SESSION_MS) {
     session.stopped = true;
+    await persistStreamSession(session);
     return { ok: false, message: "Stream session timed out" };
   }
   if (session.tickCount >= MAX_TICKS_PER_SESSION) {
     session.stopped = true;
+    await persistStreamSession(session);
     return { ok: false, message: "Stream tick limit reached" };
   }
   if (tick !== session.tickCount + 1) {

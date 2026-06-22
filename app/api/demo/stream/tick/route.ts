@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const validation = validateStreamTick(session, ip, tick!);
+  const validation = await validateStreamTick(session, ip, tick!);
   if (!validation.ok) {
     return NextResponse.json(
       { error: "Stream tick rejected", message: validation.message },

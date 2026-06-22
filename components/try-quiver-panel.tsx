@@ -143,13 +143,19 @@ export function TryQuiverPanel({
       </Button>
 
       {error && (
-        <p className="mt-4 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+        <p
+          role="alert"
+          className="mt-4 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+        >
           {error}
         </p>
       )}
 
       {result && signal && (
-        <div className="mt-4 space-y-3 rounded-lg border border-signal/40 bg-signal/10 px-4 py-3">
+        <div
+          aria-live="polite"
+          className="mt-4 space-y-3 rounded-lg border border-signal/40 bg-signal/10 px-4 py-3"
+        >
           <p className="text-sm font-medium text-signal">
             Settled — Archer sold a signal for ${result.settlement.amount_usdc}{" "}
             USDC in {elapsedSec}s

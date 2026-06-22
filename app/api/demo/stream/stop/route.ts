@@ -14,6 +14,13 @@ import { streamCloseLabel } from "@/lib/stream/constants";
 
 export const maxDuration = 60;
 
+type CloseReason = "user" | "tick_timeout" | "tick_failed";
+
+function normalizeCloseReason(reason: string | undefined): CloseReason {
+  if (reason === "tick_timeout" || reason === "tick_failed") return reason;
+  return "user";
+}
+
 export async function POST(req: NextRequest) {
   const ip = getClientIp(req);
 
@@ -53,7 +60,7 @@ export async function POST(req: NextRequest) {
     alignedTicks > 0 ? alignedTicks : await verifiedStreamTickCount(sessionId);
   const tickCount = dbTicks;
   const totalUsdc = expectedStreamTotal(tickCount);
-  const closeReason = (reason ?? "user") as "user" | "tick_timeout" | "tick_failed";
+  const closeReason = normalizeCloseReason(reason);
   const sessionRowMissing = !existing && dbTicks > 0;
   const sessionTickDrift =
     existing !== null && session !== null && session.tickCount !== dbTicks;

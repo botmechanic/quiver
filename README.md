@@ -204,7 +204,8 @@ The dashboard shows:
 BASE_URL=https://quiver-self.vercel.app npm run agent -- --limit 0.01
 ```
 
-6. Use the dashboard metrics for submission numbers: report demo buys, Scout payments, stream ticks, and distinct Scout payers separately.
+6. Before recording or submitting, run `npm run verify:demo-readiness` locally.
+7. Use the dashboard metrics for submission numbers: report demo buys, Scout payments, stream ticks, and distinct Scout payers separately.
 
 ## Deployment
 
@@ -218,7 +219,7 @@ Quiver deploys on Vercel with cloud Supabase.
    - Scout run tags payments `scout` with dynamic prices
    - Dashboard splits demo / Scout / stream metrics
    - **Stream meter** ticks up on its own when Start stream is pressed (realtime on `stream_events`)
-   - `npm run verify:stream-schema` confirms the stream tables and recent tick uniqueness
+   - `npm run verify:demo-readiness` passes lint and confirms stream tables / recent tick uniqueness
 
 Keep the funder wallet topped up (~$1 minimum; refaucet from Circle if demo volume is high).
 

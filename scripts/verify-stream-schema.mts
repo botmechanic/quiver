@@ -15,6 +15,8 @@ if (!url || !serviceKey) {
 const supabase = createClient(url, serviceKey);
 
 async function main() {
+  let failed = false;
+
   console.log("Supabase URL:", url);
 
   const { data: sessions, error: sessionsErr } = await supabase
@@ -24,6 +26,7 @@ async function main() {
 
   if (sessionsErr) {
     console.log("\n❌ demo_stream_sessions:", sessionsErr.message);
+    failed = true;
   } else {
     console.log("\n✅ demo_stream_sessions exists (sample query ok)");
   }
@@ -36,6 +39,7 @@ async function main() {
 
   if (eventsErr) {
     console.log("❌ stream_events:", eventsErr.message);
+    failed = true;
   } else {
     console.log(`✅ stream_events exists (${events?.length ?? 0} recent rows fetched)`);
     if (events?.length) {
@@ -44,20 +48,29 @@ async function main() {
   }
 
   // Duplicate tick check (unique index proxy)
-  const { data: dupes, error: dupeErr } = await supabase.rpc(
+  const { data: schemaCheck, error: schemaCheckErr } = await supabase.rpc(
     "verify_stream_schema" as never,
     {} as never,
   );
-  void dupes;
-  void dupeErr;
+  if (schemaCheckErr) {
+    console.log(
+      "ℹ️  verify_stream_schema RPC unavailable:",
+      schemaCheckErr.message,
+    );
+  } else {
+    console.log("✅ verify_stream_schema RPC returned:", schemaCheck);
+  }
 
-  const { data: allRecent } = await supabase
+  const { data: allRecent, error: recentErr } = await supabase
     .from("stream_events")
     .select("session_id, tick_number")
     .order("created_at", { ascending: false })
     .limit(200);
 
-  if (allRecent?.length) {
+  if (recentErr) {
+    console.log("❌ recent stream_events duplicate check:", recentErr.message);
+    failed = true;
+  } else if (allRecent?.length) {
     const keys = new Map<string, number>();
     let duplicateRows = 0;
     for (const row of allRecent) {
@@ -70,15 +83,23 @@ async function main() {
         ? `⚠️  ${duplicateRows} duplicate (session_id, tick_number) in last 200 rows — unique index may be missing`
         : "✅ no duplicate (session_id, tick_number) in last 200 rows",
     );
+    if (duplicateRows > 0) failed = true;
+  } else {
+    console.log("✅ no recent stream_events rows to duplicate-check");
   }
 
-  const { count: sessionCount } = await supabase
+  const { count: sessionCount, error: sessionCountErr } = await supabase
     .from("demo_stream_sessions")
     .select("*", { count: "exact", head: true });
 
-  if (sessionCount !== null && !sessionsErr) {
+  if (sessionCountErr) {
+    console.log("❌ demo_stream_sessions row count:", sessionCountErr.message);
+    failed = true;
+  } else if (sessionCount !== null) {
     console.log(`   demo_stream_sessions row count: ${sessionCount}`);
   }
+
+  if (failed) process.exit(1);
 }
 
 main().catch((e) => {

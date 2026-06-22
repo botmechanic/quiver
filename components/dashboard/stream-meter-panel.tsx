@@ -20,6 +20,7 @@ interface StreamStartResponse {
   session_id: string;
   rate_usdc: string;
   label: string;
+  max_ticks?: number;
 }
 
 interface StreamStopResponse {
@@ -78,6 +79,7 @@ export function StreamMeterPanel() {
   const [startedAt, setStartedAt] = useState<number | null>(null);
   const [durationSec, setDurationSec] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [starting, setStarting] = useState(false);
   const [stopSummary, setStopSummary] = useState<StreamStopResponse | null>(
     null,
   );
@@ -86,6 +88,7 @@ export function StreamMeterPanel() {
     null,
   );
   const [failClosed, setFailClosed] = useState(false);
+  const [maxTicks, setMaxTicks] = useState<number | null>(null);
 
   const tickRef = useRef(0);
   const durationRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -192,7 +195,7 @@ export function StreamMeterPanel() {
   }, [sessionId, closeSession]);
 
   const fireTick = useCallback(
-    async (sid: string) => {
+    async (sid: string, cap: number | null) => {
       if (stoppingRef.current || !runningRef.current) return;
 
       const nextTick = tickRef.current + 1;
@@ -227,6 +230,10 @@ export function StreamMeterPanel() {
         tickRef.current = nextTick;
         setError(null);
         setFailClosed(false);
+
+        if (cap !== null && nextTick >= cap) {
+          await closeSession(sid, "user");
+        }
       } catch (err) {
         if (err instanceof FetchTimeoutError) {
           await closeSession(
@@ -250,9 +257,9 @@ export function StreamMeterPanel() {
   );
 
   const runTickLoop = useCallback(
-    async (sid: string) => {
+    async (sid: string, cap: number | null) => {
       while (runningRef.current && !stoppingRef.current) {
-        await fireTick(sid);
+        await fireTick(sid, cap);
         if (!runningRef.current || stoppingRef.current) break;
         await new Promise((r) => setTimeout(r, 1000));
       }
@@ -261,9 +268,13 @@ export function StreamMeterPanel() {
   );
 
   const startStream = useCallback(async () => {
+    if (starting || runningRef.current) return;
+
+    setStarting(true);
     setError(null);
     setStopSummary(null);
     setFailClosed(false);
+    setMaxTicks(null);
     tickRef.current = 0;
     setDurationSec(0);
 
@@ -285,17 +296,21 @@ export function StreamMeterPanel() {
       }
 
       const now = Date.now();
+      const cap = Number.isFinite(data.max_ticks) ? data.max_ticks ?? null : null;
       setSessionId(data.session_id);
       setStartedAt(now);
       setRunning(true);
+      setMaxTicks(cap);
       runningRef.current = true;
       stoppingRef.current = false;
 
-      void runTickLoop(data.session_id);
+      void runTickLoop(data.session_id, cap);
     } catch (err) {
       setError((err as Error).message);
+    } finally {
+      setStarting(false);
     }
-  }, [runTickLoop]);
+  }, [runTickLoop, starting]);
 
   useEffect(() => {
     return () => clearTimers();
@@ -345,7 +360,8 @@ export function StreamMeterPanel() {
             Each second signs one EIP-3009 authorization (~$
             {STREAM_RATE_USDC.toFixed(4)}/s). The meter shows{" "}
             <strong className="text-signal">authorized / verified</strong>{" "}
-            volume — settlement batches later on Arc.
+            volume — settlement batches later on Arc. Demo streams are capped
+            to protect the funder wallet.
           </p>
         </div>
         {running && (
@@ -374,6 +390,7 @@ export function StreamMeterPanel() {
           </p>
           <p className="mt-1 text-xs text-muted-foreground">
             {displayTicks} tick{displayTicks !== 1 ? "s" : ""}
+            {maxTicks !== null ? ` of ${maxTicks} max` : ""}
             {pendingTick && pendingTickNumber !== null
               ? ` · signing tick ${pendingTickNumber}… (max ${tickTimeoutMs(pendingTickNumber) / 1000}s)`
               : ""}
@@ -394,6 +411,7 @@ export function StreamMeterPanel() {
 
       {showInvariant && (
         <div
+          aria-live="polite"
           className={`mb-4 rounded-lg border px-4 py-3 text-sm ${
             failClosed
               ? "border-primary/50 bg-primary/10 text-accent-foreground"
@@ -427,13 +445,13 @@ export function StreamMeterPanel() {
           <Button
             type="button"
             onClick={() => void startStream()}
-            disabled={loading}
+            disabled={loading || starting}
             className="bg-signal font-semibold text-background hover:bg-signal/90"
           >
-            {loading ? (
+            {loading || starting ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Connecting…
+                {starting ? "Starting…" : "Connecting…"}
               </>
             ) : (
               "Start stream"
@@ -453,13 +471,19 @@ export function StreamMeterPanel() {
       </div>
 
       {error && (
-        <p className="mt-4 rounded-md border border-red-500/40 bg-red-950/30 px-3 py-2 text-sm text-red-200">
+        <p
+          role="alert"
+          className="mt-4 rounded-md border border-red-500/40 bg-red-950/30 px-3 py-2 text-sm text-red-200"
+        >
           {error}
         </p>
       )}
 
       {events.length > 0 && (
-        <div className="mt-4 max-h-32 overflow-y-auto rounded-md border border-border/30 bg-muted/30 px-3 py-2 font-mono text-xs text-muted-foreground">
+        <div
+          aria-live="polite"
+          className="mt-4 max-h-32 overflow-y-auto rounded-md border border-border/30 bg-muted/30 px-3 py-2 font-mono text-xs text-muted-foreground"
+        >
           {events.slice(-8).map((ev) => (
             <div key={ev.id} className="flex justify-between gap-4 py-0.5">
               <span>
