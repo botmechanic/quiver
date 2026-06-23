@@ -161,4 +161,5 @@ Real-time view of money moving. Counters proven to resonate in this ecosystem: *
 - **Traction underperforms.** → `/try` link live; demo buys bank honestly. Share in Discord + ATC/Skool immediately after deploy verification.
 - **Demo funder drain.** → Per-IP rate limit (30s default); refaucet funder if needed; know IP rotation is the exposed edge.
 - **DRY_RUN safety.** → Trading strategy and payment layer get **independent kill switches**; a live-payments demo must never imply live trading.
+- **Judge access.** → Do **not** hand judges operator credentials if avoidable. For final submission, prefer a token-gated read-only judge route over passkeys: `JUDGE_ACCESS_TOKEN` unlocks proof-only surfaces while withdrawals, Gateway controls, demo buys, and stream start/stop remain operator-only.
 - **Compliance posture.** → Public data only; signal-sharing framed as educational, not investment advice.

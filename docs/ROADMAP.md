@@ -97,6 +97,7 @@ The one axis no prior-cohort winner occupied. Highest variance — protect this 
 - [ ] **Demo video (<3 min):** lead with the stream (tap-to-stop, exact-cost) and the two-agent settlement (<0.5s). Trace/verifiability is supporting, not the headline — it's table stakes this cohort.
 - [ ] **README:** ensure it describes only what's *live*; roadmap stays clearly forward-looking. No gap between claim and reality (the one thing that loses judge trust).
 - [ ] **Traction numbers:** fill the form honestly — demo buys and real agent payments reported *separately*. Bar to beat: the comparable's ~19 payers / sub-dollar.
+- [ ] **Read-only judge access:** add `/judge` or `/dashboard/judge` gated by `JUDGE_ACCESS_TOKEN`; show proof surfaces only (metrics, payments, Scout decisions, stream events, Obol validation, Arcscan links) and hide/disable withdrawals, Gateway controls, demo buy, and stream start/stop. Prefer this over passkeys for final submission: lower risk, easier for judges, and no operator controls exposed.
 - [ ] **Polish (cheap, high-signal):** GitHub repo description + topics; tag a release; confirm dashboard renders for a logged-out/first-time judge; consider a cleaner domain over `quiver-self.vercel.app` (you own `VendingMachine.money`) — DNS change only, day-13 polish.
 - [ ] **Final submission before the June 29 deadline.** Submit early and often — resubmission is free.
 
