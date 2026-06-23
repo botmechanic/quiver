@@ -23,6 +23,12 @@ What's shipped today:
 - Dashboard metrics that **separate demo buys, Scout payments, and stream ticks** (`payment_events.raw.source`).
 - Verifiable reasoning trace (SHA-256 hash) on every Archer response.
 
+## External Agent Validation
+
+Obol independently tested Quiver as an external x402 buyer and bought `GET /api/archer/signal`, paying **0.00063 USDC** for a confidence-priced signal. The paid response returned a clean `sell` signal plus Quiver's `trace_hash`, validating the paid signal and verifiable reasoning path outside Quiver's own Scout and demo flows.
+
+Obol also scored Quiver on-chain with its agent. Proof transaction: [0x883706f4708c046cd5043c560ad55519ad75a09d63aa9ded9cf782007cd3f6cc](https://testnet.arcscan.app/tx/0x883706f4708c046cd5043c560ad55519ad75a09d63aa9ded9cf782007cd3f6cc).
+
 ## Project Flow
 
 ```mermaid
