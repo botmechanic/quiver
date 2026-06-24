@@ -2,7 +2,7 @@
 
 > Companion to `docs/PRD.md`. The PRD is the **what & why**; this is the **what's-done & what's-next** schedule.
 > **Event:** Lepton Agents Hackathon (Canteen × Circle) · June 15–29, 2026 · Final submission before **June 29**.
-> **Headline:** true pay-per-second streaming over x402 on Arc — **loop + dashboard meter shipped (Jun 18)**; hardening + submission polish remain.
+> **Headline:** per-second x402 settlement rail on Arc — **loop + dashboard meter shipped (Jun 18)**; Archer↔Scout is the agent demo, and the Owncast sidecar is the creator-stack surface.
 > **Last updated:** June 22, 2026 — update the status column when something ships or deploys.
 
 ---
@@ -40,6 +40,8 @@ Blocks 4–6 are deployed to [quiver-self.vercel.app](https://quiver-self.vercel
   - [x] Confirm `/try` calls the **deployed** Archer endpoints, not localhost/preview
 - [ ] **Release `https://quiver-self.vercel.app/try` in the hackathon Discord + ATC/Skool.** This *is* the traction event — every demo buy from here is a real, honestly-labeled data point.
 - [ ] Submit/refresh the v0 on the hackathon form.
+
+Owncast sidecar boundary: verified locally against Owncast `0.2.5`; `CHAT` starts the stream, `USER_PARTED` closes it, and connected-client heartbeat is the fallback. Do not claim `USER_JOINED` as the start event unless a target deployment proves it fires.
 
 **Funder runway:** ~15.84 USDC ≈ ~12k demo buys. Rate limit (per-IP 30s) is the guardrail, not wallet exhaustion. Top up from the Circle faucet if balance drops below ~$1. Known soft edge: per-IP limit is defeatable by IP rotation — acceptable for a testnet demo; watch for unusually fast drain once the link is public.
 
@@ -96,6 +98,7 @@ The one axis no prior-cohort winner occupied. Highest variance — protect this 
 
 - [ ] **Demo video (<3 min):** lead with the stream (tap-to-stop, exact-cost) and the two-agent settlement (<0.5s). Trace/verifiability is supporting, not the headline — it's table stakes this cohort.
 - [ ] **README:** ensure it describes only what's *live*; roadmap stays clearly forward-looking. No gap between claim and reality (the one thing that loses judge trust).
+- [x] **Stage 1 creator copy:** position Quiver as a per-second rail with an Owncast sidecar verified locally; use the precise `CHAT` start / `USER_PARTED` close / heartbeat fallback wording.
 - [ ] **Traction numbers:** fill the form honestly — demo buys and real agent payments reported *separately*. Bar to beat: the comparable's ~19 payers / sub-dollar.
 - [ ] **Read-only judge access:** add `/judge` or `/dashboard/judge` gated by `JUDGE_ACCESS_TOKEN`; show proof surfaces only (metrics, payments, Scout decisions, stream events, Obol validation, Arcscan links) and hide/disable withdrawals, Gateway controls, demo buy, and stream start/stop. Prefer this over passkeys for final submission: lower risk, easier for judges, and no operator controls exposed.
 - [ ] **Polish (cheap, high-signal):** GitHub repo description + topics; tag a release; confirm dashboard renders for a logged-out/first-time judge; consider a cleaner domain over `quiver-self.vercel.app` (you own `VendingMachine.money`) — DNS change only, day-13 polish.

@@ -3,7 +3,7 @@
 > **Status:** Draft v1 · Lepton Agents Hackathon (Canteen × Circle) · June 15–29, 2026  
 > **Implementation (Jun 22):** v0 deployed · dynamic pricing · Scout buy/decline · `/try` demo path · **streaming loop + dashboard meter shipped** · partial stream hardening shipped (timeouts, fail-closed UI, verified-count reconciliation)  
 > **Schedule:** see `docs/ROADMAP.md`
-> **One-liner:** Two AI agents that earn and spend real money — fractions of a cent at a time — over x402 on Arc, with the headline feature being **true pay-per-second streaming**.
+> **One-liner:** Quiver is a per-second x402 settlement rail on Arc. Archer↔Scout is the agent demo of it; an Owncast sidecar is the creator-stack deployment of the same rail.
 
 ---
 
@@ -36,7 +36,7 @@ The prior Agora cohort results (published June 16, 2026) revealed three winning 
 
 **The white space:** **pay-per-second streaming over x402** appears in none of the winning projects or the organizer's named themes. The Lepton brief independently flags streaming as a real code gap. This is Quiver's anchor. Reference implementation (`circlefin/arc-nanopayments`) and the leading comparable (ReasoningReceipt, `github.com/tang-vu/reasoning-receipt`) both ship only **discrete** per-call payments — no streaming.
 
-**Strategic consequence:** Frame Quiver as *the streaming nanopayments project*, with trade-signal agents as the vehicle — not as a trade-signal agent that happens to stream.
+**Strategic consequence:** Frame Quiver as *the streaming nanopayments project*, with trade-signal agents as the first demo surface — not as a trade-signal agent that happens to stream. Stage 1 Owncast positioning is now verified locally against Owncast `0.2.5`: `CHAT` starts per-second x402 ticks, `USER_PARTED` closes the session, and connected-client heartbeat checks guard missed/delayed close events.
 
 ---
 
@@ -45,6 +45,7 @@ The prior Agora cohort results (published June 16, 2026) revealed three winning 
 - **Archer (seller agent)** — produces trading-signal hunches, sells them over x402, prices itself dynamically, and ships a verifiable reasoning trace with each signal.
 - **Scout (buyer agent)** — operates on a daily budget; reads each signal's reasoning and decides, per call, whether it is worth the quoted price.
 - **Human consumers** — hackathon peers and the builder's existing community (ATC / Skool members). **Hybrid traction path (shipped):** `/try` triggers a **demo-funded** real settlement (no wallet required), clearly labeled and recorded separately from distinct payers. Option B (visitor pays with own wallet) is a stretch only if streaming lands with time to spare.
+- **Creators / streamers** — Owncast sidecar surface. Quiver's per-second core runs from real Owncast chat presence: `CHAT` starts a session, `USER_PARTED` stops it, and `GET /api/integrations/clients` provides heartbeat fallback. Do not claim a pure `USER_JOINED` / `USER_PARTED` model for Owncast `0.2.5`; `USER_JOINED` was not observed in local replay.
 - **Judges** — evaluate via a deployed link, README, and a <3-minute demo video without the builder present.
 
 ---

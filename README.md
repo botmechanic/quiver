@@ -4,15 +4,15 @@
 
 # Quiver
 
-Two AI agents that earn and spend real money, fractions of a cent at a time, over x402 on Arc.
+Quiver is a per-second x402 settlement rail on Arc. Archer and Scout are the agent demo of it; an Owncast sidecar is the creator-stack deployment of the same rail.
 
-Quiver is a Lepton Agents Hackathon project built on the `circlefin/arc-nanopayments` starter. **Archer** is the seller agent: it produces strategy signals, prices each request dynamically, protects them behind x402, and receives USDC through Circle Gateway. **Scout** is the buyer agent: it runs on a funder-level USDC budget, evaluates Archer's quoted price and confidence per call, and buys or declines with a logged reason.
+Quiver is a Lepton Agents Hackathon project built on the `circlefin/arc-nanopayments` starter. It bills for exactly the seconds consumed and stops the instant signing stops, composing a streaming rail from per-tick EIP-3009 authorizations that Circle Gateway batches on Arc testnet. **Archer** is the seller agent: it produces strategy signals, prices each request dynamically, protects them behind x402, and receives USDC through Circle Gateway. **Scout** is the buyer agent: it runs on a funder-level USDC budget, evaluates Archer's quoted price and confidence per call, and buys or declines with a logged reason.
 
 **Live deploy:** [https://quiver-self.vercel.app](https://quiver-self.vercel.app) · **Public demo:** [https://quiver-self.vercel.app/try](https://quiver-self.vercel.app/try)
 
 ## Why It Matters
 
-Most x402 examples sell one discrete API response at a fixed price. Quiver adds **agentic pricing and buying decisions** on top of the starter loop, plus the project headline: **pay-per-second streaming over x402** — composed from many small EIP-3009 authorizations that Circle Gateway batches for settlement on Arc.
+Most x402 examples sell one discrete API response at a fixed price. Quiver makes the primitive the headline: **pay-per-second streaming over x402** — composed from many small EIP-3009 authorizations that Circle Gateway batches for settlement on Arc. Archer and Scout prove the rail with autonomous pricing and buying decisions; the same per-second core now has a verified local Owncast sidecar where chat presence drives creator-stream ticks.
 
 What's shipped today:
 
@@ -22,6 +22,7 @@ What's shipped today:
 - **Pay-per-second streaming** — per-tick x402 loop (`GET /api/archer/stream`), `stream_events` table, Scout CLI (`npm run stream`), dashboard live meter with tap-to-stop.
 - Dashboard metrics that **separate demo buys, Scout payments, and stream ticks** (`payment_events.raw.source`).
 - Verifiable reasoning trace (SHA-256 hash) on every Archer response.
+- **Owncast sidecar** — local Owncast `0.2.5` replay verified the presence model: `CHAT` starts the stream, `USER_PARTED` closes it, and `GET /api/integrations/clients` heartbeat is the fallback. Proof session `25418b23-4f15-4146-aad8-3038320a011e` wrote a verified `stream_events` tick with Owncast metadata; heartbeat-only session `bc3fa644-031f-4bfa-89d1-7c4849aad1fb` stopped without `USER_PARTED` delivered to the sidecar.
 
 ## External Agent Validation
 
@@ -125,6 +126,21 @@ Verify realtime delivery:
 ```bash
 node --experimental-transform-types --no-warnings --env-file=.env.local scripts/verify-stream-realtime.mts
 ```
+
+## Owncast sidecar
+
+The Owncast sidecar runs as a local Node process next to an Owncast server. It receives `POST /webhooks/incoming`, starts Quiver's existing per-second stream on Owncast `CHAT` or `USER_JOINED`, stops on `USER_PARTED`, and uses `GET /api/integrations/clients` as the heartbeat fallback if a close event is missed.
+
+Run the sidecar against local Owncast:
+
+```bash
+OWNCAST_URL=http://localhost:8080 \
+OWNCAST_ACCESS_TOKEN=<token> \
+BASE_URL=http://localhost:3000 \
+npm run owncast:sidecar
+```
+
+The verified local model is intentionally precise: do not describe it as a pure `USER_JOINED` / `USER_PARTED` window for Owncast `0.2.5`; `USER_JOINED` was not observed in the replay. `CHAT` is the verified start signal, `USER_PARTED` is the verified clean-close signal, heartbeat is the verified fallback, and `stream_events` remains the billing source of truth. See `docs/OWNCAST_STAGE_1.md` for the verdict table.
 
 ## Try Quiver (human demo path)
 
