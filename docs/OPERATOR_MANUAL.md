@@ -207,6 +207,31 @@ Keep `BASE_URL=http://localhost:3000` only for local app runs.
 
 ## Verification Runbooks
 
+### Dashboard Judge Surface
+
+The dashboard is organized for judges in this order:
+
+1. **Headline proof row:** Scout-only real payer metrics. It shows distinct Scout payers, Scout settlements, and Scout-paid volume. Demo-funded clicks and stream ticks are excluded from this headline row.
+2. **Source-aware stream meter:** the same meter labels dashboard-started sessions as agent streams and Owncast-tagged sessions as creator streams. If source cannot be determined, it falls back to a neutral stream label.
+3. **Integration surfaces strip:** agents are shown as live Scout settlement counts; creators are shown as verified local Owncast ticks / early access.
+4. **Scout decisions:** buy/decline reasoning for the agentic judging axis.
+5. **Payment metrics and feed:** source-split demo, Scout, and stream details.
+6. **Operator controls:** demo trigger, Gateway balance, withdrawals, and tables.
+
+Current dashboard-classified proof numbers at the time of this update:
+
+- 9 distinct Scout payers.
+- 56 Scout settlements.
+- `$0.050480` Scout-paid testnet USDC volume.
+- 2 Owncast-tagged verified stream ticks.
+
+Keep these boundaries intact:
+
+- Headline row stays Scout-only.
+- Total blended activity belongs in the source-split metrics below, not the headline.
+- Creator count must come from Owncast-tagged rows, not a fabricated session count.
+- Source-aware meter must fail safe: current Owncast metadata can label creator; dashboard-started stream labels agent; unknown labels neutral.
+
 ### Claim Drift Check
 
 Before submitting or posting public copy, search for overclaims:
@@ -281,11 +306,13 @@ When drafting `arc-canteen` text, do not include blank lines inside the pasted u
 
 Lead with the strongest proof:
 
-1. Per-second stream meter: start, let ticks land, stop, show exact-cost invariant.
-2. Owncast sidecar: chat message starts a stream tick, `stream_events` records Owncast metadata.
-3. Archer and Scout: show autonomous pricing and buy/decline decisions.
-4. ProofStrip/dashboard: show demo, Scout, and stream metrics separated.
-5. Obol validation: show external buyer proof if time remains.
+1. Dashboard headline row: Scout-only real payer metrics, not demo-funded vanity counts.
+2. Per-second stream meter: start, let ticks land, stop, show exact-cost invariant and agent source label.
+3. Integration surfaces strip: one rail, agents live, Owncast verified locally / early access.
+4. Owncast sidecar: chat message starts a stream tick, `stream_events` records Owncast metadata.
+5. Archer and Scout: show autonomous pricing and buy/decline decisions.
+6. ProofStrip/dashboard: show demo, Scout, and stream metrics separated.
+7. Obol validation: show external buyer proof if time remains.
 
 Keep the story simple:
 

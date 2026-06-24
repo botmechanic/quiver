@@ -208,26 +208,28 @@ Sign in at `/` → `/dashboard` (credentials from `ADMIN_EMAIL` / `ADMIN_PASSWOR
 
 The dashboard shows:
 
-- **Demo buys** vs **Scout payments** vs **stream ticks** (separate counts and volume)
-- Distinct Scout payer addresses (excludes demo)
+- **Headline proof row** with Scout-only real payer metrics: distinct Scout payers, Scout settlements, and Scout-paid volume (demo excluded)
+- **Source-aware stream meter** — labels agent streams vs Owncast creator streams from stream metadata, with neutral fallback when unknown
+- **Integration surfaces strip** — agents shown as live Scout settlements; creators shown as verified local Owncast ticks / early access
+- **Demo buys** vs **Scout payments** vs **stream ticks** (separate counts and volume below the headline)
 - Per-row **source** badge (`demo` | `scout` | `stream`)
-- **Live stream meter** — authorized total, rate, duration, tap-to-stop, exact-cost invariant
 - Gateway balance, withdrawals, realtime payment feed
 
 ## Judge Walkthrough
 
 1. Open [https://getquiver.xyz/try](https://getquiver.xyz/try) and click **Buy Archer signal (demo)**.
 2. Confirm the result shows the settled USDC amount, Archer's price reason, the trace hash, and an Arcscan transaction link when a transaction hash is available.
-3. Sign in to `/dashboard` with the provided operator credentials and confirm the payment row is tagged `demo`.
-4. Start the **Pay-per-second Archer feed**, let a few ticks land, then stop it. The invariant should read `ticks × $0.0001 = total` using verified `stream_events`.
-5. Run Scout locally against production to show agentic buy/decline decisions:
+3. Sign in to `/dashboard` with the provided operator credentials and confirm the headline row is Scout-only: distinct Scout payers, Scout settlements, and Scout volume.
+4. Confirm the integration strip shows agents as live Scout settlements and creators as verified local Owncast ticks / early access.
+5. Start the **Pay-per-second stream**, let a few ticks land, then stop it. The meter should label the dashboard-started stream as an agent stream and the invariant should read `ticks × $0.0001 = total` using verified `stream_events`.
+6. Run Scout locally against production to show agentic buy/decline decisions:
 
 ```bash
 BASE_URL=https://getquiver.xyz npm run agent -- --limit 0.01
 ```
 
-6. Before recording or submitting, run `npm run verify:demo-readiness` locally.
-7. Use the dashboard metrics for submission numbers: report demo buys, Scout payments, stream ticks, and distinct Scout payers separately.
+7. Before recording or submitting, run `npm run verify:demo-readiness` locally.
+8. Use the dashboard metrics for submission numbers: report demo buys, Scout payments, stream ticks, and distinct Scout payers separately.
 
 ## Deployment
 
