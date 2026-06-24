@@ -20,6 +20,9 @@ import { BatchFacilitatorClient } from "@circle-fin/x402-batching/server";
 import { createClient } from "@supabase/supabase-js";
 import { NextRequest, NextResponse } from "next/server";
 import {
+  OWNCAST_CLIENT_HEADER,
+  OWNCAST_EVENT_HEADER,
+  OWNCAST_USER_HEADER,
   PAYMENT_SOURCE_HEADER,
   STREAM_SESSION_HEADER,
   STREAM_TICK_HEADER,
@@ -34,6 +37,9 @@ const ARC_TESTNET_GATEWAY_WALLET = "0x0077777d7EBA4688BDeF3E311b846F25870A19B9";
 
 export {
   PAYMENT_SOURCE_HEADER,
+  OWNCAST_CLIENT_HEADER,
+  OWNCAST_EVENT_HEADER,
+  OWNCAST_USER_HEADER,
   STREAM_SESSION_HEADER,
   STREAM_TICK_HEADER,
 } from "@/lib/stream/headers";
@@ -254,6 +260,9 @@ export function withGateway<TContext = void>(
         source: paymentSource,
         stream_session: req.headers.get(STREAM_SESSION_HEADER),
         stream_tick: req.headers.get(STREAM_TICK_HEADER),
+        owncast_client_id: req.headers.get(OWNCAST_CLIENT_HEADER),
+        owncast_user_id: req.headers.get(OWNCAST_USER_HEADER),
+        owncast_event_type: req.headers.get(OWNCAST_EVENT_HEADER),
       };
 
       const { error } = await supabase.from("payment_events").insert({

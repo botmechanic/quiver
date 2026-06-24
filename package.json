@@ -8,6 +8,7 @@
     "generate-wallets": "node --experimental-transform-types --no-warnings generate-wallets.mts",
     "agent": "node --experimental-transform-types --no-warnings --env-file=.env.local agent.mts",
     "stream": "node --experimental-transform-types --no-warnings --env-file=.env.local stream.mts",
+    "owncast:sidecar": "node --experimental-transform-types --no-warnings --env-file=.env.local scripts/owncast-sidecar.mts",
     "spike:overlapping-auth": "node --experimental-transform-types --no-warnings --env-file=.env.local scripts/spike-overlapping-auth.mts",
     "verify:demo-readiness": "npm run lint && npm run verify:stream-schema",
     "verify:stream-schema": "node --experimental-transform-types --no-warnings --env-file=.env.local scripts/verify-stream-schema.mts",

@@ -58,9 +58,11 @@ export interface StreamSession {
 export interface StartStreamOptions {
   baseUrl?: string;
   depositAmount?: string;
+  extraHeaders?: Record<string, string>;
   tickIntervalMs?: number;
   maxTicks?: number;
   maxSpendUsdc?: number;
+  sessionId?: string;
   onTick?: (result: StreamTickResult) => void;
 }
 
@@ -171,7 +173,7 @@ export async function startStream(
   const maxSpendUsdc =
     options.maxSpendUsdc ?? Number.POSITIVE_INFINITY;
 
-  const sessionId = randomUUID();
+  const sessionId = options.sessionId ?? randomUUID();
   const funderAccount = privateKeyToAccount(funderKey);
   const { gateway, ephemeralAddress } = await fundSessionWallet(
     funderAccount,
@@ -219,6 +221,7 @@ export async function startStream(
             [PAYMENT_SOURCE_HEADER]: "stream",
             [STREAM_SESSION_HEADER]: sessionId,
             [STREAM_TICK_HEADER]: String(tick),
+            ...options.extraHeaders,
           },
         }),
         STREAM_TICK_SERVER_TIMEOUT_MS,
