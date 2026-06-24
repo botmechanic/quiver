@@ -52,13 +52,13 @@ import {
   Loader2,
 } from "lucide-react";
 import { shortenHash } from "@/lib/utils";
-import { usePaymentEvents } from "@/hooks/use-transactions";
+import { usePaymentEvents, type PaymentEvent } from "@/hooks/use-transactions";
 import { useWithdrawals } from "@/hooks/use-withdrawals";
 import { PaymentMetrics } from "@/components/dashboard/payment-metrics";
 import { StreamMeterPanel } from "@/components/dashboard/stream-meter-panel";
 import { ScoutDecisionsPanel } from "@/components/dashboard/scout-decisions-panel";
 import { TryQuiverPanel } from "@/components/try-quiver-panel";
-import { getPaymentSource } from "@/lib/payments";
+import { formatUsdcTotal, getPaymentSource } from "@/lib/payments";
 
 type SortDirection = "default" | "asc" | "desc";
 type SortField = "amount" | "date";
@@ -144,6 +144,132 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 const PAGE_SIZE_OPTIONS = [10, 25, 50, 100] as const;
+
+function hasOwncastMetadata(ev: PaymentEvent): boolean {
+  return Boolean(ev.raw?.owncast_user_id || ev.raw?.owncast_event_type);
+}
+
+function ProofStat({
+  label,
+  value,
+  detail,
+  verified,
+}: {
+  label: string;
+  value: string;
+  detail: string;
+  verified?: boolean;
+}) {
+  return (
+    <div className="rounded-xl border border-border/40 bg-card p-5">
+      <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
+        {label}
+      </p>
+      <p
+        className={`mt-3 font-mono text-3xl font-semibold ${
+          verified ? "text-signal" : "text-accent-foreground"
+        }`}
+      >
+        {value}
+      </p>
+      <p className="mt-2 text-sm text-muted-foreground">{detail}</p>
+    </div>
+  );
+}
+
+function HeadlineProofRow({ events }: { events: PaymentEvent[] }) {
+  const stats = useMemo(() => {
+    const scoutEvents = events.filter((ev) => getPaymentSource(ev) === "scout");
+    const scoutPayers = new Set(scoutEvents.map((ev) => ev.payer.toLowerCase()));
+
+    return {
+      scoutPayers: scoutPayers.size,
+      totalSettlements: events.length,
+      totalVolume: formatUsdcTotal(events),
+    };
+  }, [events]);
+
+  return (
+    <section className="mb-8 grid gap-3 md:grid-cols-3">
+      <ProofStat
+        label="Distinct real payers"
+        value={String(stats.scoutPayers)}
+        detail="Scout payer wallets only; demo-funded clicks excluded"
+      />
+      <ProofStat
+        label="All verified settlements"
+        value={String(stats.totalSettlements)}
+        detail="Demo, Scout, and stream rows; source split below"
+        verified
+      />
+      <ProofStat
+        label="All-source volume"
+        value={`$${stats.totalVolume}`}
+        detail="Demo + Scout + stream testnet USDC; not distinct payer count"
+      />
+    </section>
+  );
+}
+
+function IntegrationSurfacesStrip({ events }: { events: PaymentEvent[] }) {
+  const stats = useMemo(() => {
+    const scoutEvents = events.filter((ev) => getPaymentSource(ev) === "scout");
+    const scoutPayers = new Set(scoutEvents.map((ev) => ev.payer.toLowerCase()));
+    const owncastEvents = events.filter(
+      (ev) => getPaymentSource(ev) === "stream" && hasOwncastMetadata(ev),
+    );
+
+    return {
+      scoutCount: scoutEvents.length,
+      scoutPayers: scoutPayers.size,
+      creatorTickCount: owncastEvents.length,
+    };
+  }, [events]);
+
+  return (
+    <section className="mb-8 rounded-xl border border-border/40 bg-card p-6">
+      <div className="mb-5">
+        <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
+          Integration surfaces
+        </p>
+        <h2 className="mt-2 text-xl font-semibold text-accent-foreground">
+          One rail, two surfaces
+        </h2>
+        <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
+          Agent payments are live; the Owncast creator integration is verified
+          end-to-end and still early.
+        </p>
+      </div>
+      <div className="grid gap-3 md:grid-cols-2">
+        <div className="rounded-lg border border-border/40 bg-muted/30 p-4">
+          <p className="text-xs uppercase tracking-wide text-muted-foreground">
+            Agents
+          </p>
+          <p className="mt-2 font-mono text-3xl font-semibold text-accent-foreground">
+            {stats.scoutCount}
+          </p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Scout settlements · {stats.scoutPayers} distinct Scout payer
+            {stats.scoutPayers === 1 ? "" : "s"}
+          </p>
+        </div>
+        <div className="rounded-lg border border-border/40 bg-muted/30 p-4">
+          <p className="text-xs uppercase tracking-wide text-muted-foreground">
+            Creators (Owncast)
+          </p>
+          <p className="mt-2 font-mono text-3xl font-semibold text-signal">
+            {stats.creatorTickCount}
+          </p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {stats.creatorTickCount > 0
+              ? `Verified settled tick${stats.creatorTickCount === 1 ? "" : "s"} · local Owncast 0.2.5 · early access`
+              : "No Owncast-tagged rows in this DB yet · local proof documented"}
+          </p>
+        </div>
+      </div>
+    </section>
+  );
+}
 
 export default function Dashboard() {
   const { events, loading: loadingPayments } = usePaymentEvents();
@@ -253,14 +379,20 @@ export default function Dashboard() {
         </p>
       </div>
 
-      <PaymentMetrics events={events} />
+      <HeadlineProofRow events={events} />
 
       <div className="mb-8">
-        <StreamMeterPanel />
+        <StreamMeterPanel paymentEvents={events} />
       </div>
+
+      <IntegrationSurfacesStrip events={events} />
 
       <div className="mb-8">
         <ScoutDecisionsPanel />
+      </div>
+
+      <div className="mb-8">
+        <PaymentMetrics events={events} />
       </div>
 
       <div className="mb-8">

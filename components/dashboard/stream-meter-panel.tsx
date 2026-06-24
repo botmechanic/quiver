@@ -4,7 +4,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Square } from "lucide-react";
-import { useStreamEvents } from "@/hooks/use-stream-events";
+import { useStreamEvents, type StreamEvent } from "@/hooks/use-stream-events";
+import type { PaymentEvent } from "@/hooks/use-transactions";
+import { getPaymentSource } from "@/lib/payments";
 import {
   STREAM_RATE_USDC,
   buildStreamInvariant,
@@ -39,6 +41,84 @@ interface StreamStopResponse {
 }
 
 type CloseReason = "user" | "tick_timeout" | "tick_failed";
+type StreamSource = "agent" | "creator" | "unknown";
+
+const STREAM_COPY: Record<
+  StreamSource,
+  { eyebrow: string; title: string; body: string }
+> = {
+  agent: {
+    eyebrow: "Agent stream",
+    title: "Agent stream · Scout ↔ Archer",
+    body: "Scout signs one authorization per second for Archer's live feed. Same meter, same exact-cost invariant.",
+  },
+  creator: {
+    eyebrow: "Creator stream",
+    title: "Creator stream · Owncast",
+    body: "Chat-active Owncast presence opens the stream; USER_PARTED or heartbeat closes it. Same rail, same exact-cost invariant.",
+  },
+  unknown: {
+    eyebrow: "Live stream",
+    title: "Pay-per-second stream",
+    body: "Start a stream to watch verified seconds accrue. The meter labels the source once stream_events identify it.",
+  },
+};
+
+function detectStreamSource({
+  events,
+  paymentEvents,
+  sessionId,
+  starting,
+}: {
+  events: StreamEvent[];
+  paymentEvents: PaymentEvent[];
+  sessionId: string | null;
+  starting: boolean;
+}): StreamSource {
+  if (
+    events.some(
+      (event) =>
+        event.raw?.owncast_user_id != null ||
+        event.raw?.owncast_event_type != null,
+    )
+  ) {
+    return "creator";
+  }
+
+  if (sessionId || starting) return "agent";
+
+  const latestStreamPayment = paymentEvents.find(
+    (event) => getPaymentSource(event) === "stream",
+  );
+  if (!latestStreamPayment) return "unknown";
+
+  if (
+    latestStreamPayment.raw?.owncast_user_id != null ||
+    latestStreamPayment.raw?.owncast_event_type != null
+  ) {
+    return "creator";
+  }
+
+  return "agent";
+}
+
+function sourceConfidence({
+  events,
+  paymentEvents,
+  sessionId,
+  starting,
+}: {
+  events: StreamEvent[];
+  paymentEvents: PaymentEvent[];
+  sessionId: string | null;
+  starting: boolean;
+}): "current" | "recent" | "none" {
+  if (events.length > 0 || sessionId || starting) return "current";
+  if (paymentEvents.some((event) => getPaymentSource(event) === "stream")) {
+    return "recent";
+  }
+  return "none";
+}
 
 function formatDuration(seconds: number): string {
   const m = Math.floor(seconds / 60);
@@ -73,7 +153,11 @@ async function pollVerifiedTickCount(
   return best;
 }
 
-export function StreamMeterPanel() {
+export function StreamMeterPanel({
+  paymentEvents = [],
+}: {
+  paymentEvents?: PaymentEvent[];
+}) {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [running, setRunning] = useState(false);
   const [startedAt, setStartedAt] = useState<number | null>(null);
@@ -345,23 +429,35 @@ export function StreamMeterPanel() {
           stopSummary.tick_count,
         )
       : null;
+  const sourceState = sourceConfidence({
+    events,
+    paymentEvents,
+    sessionId,
+    starting,
+  });
+  const streamCopy =
+    STREAM_COPY[
+      detectStreamSource({ events, paymentEvents, sessionId, starting })
+    ];
 
   return (
-    <section className="rounded-xl border border-signal/40 bg-card p-6 text-foreground shadow-lg">
+    <section className="rounded-xl border border-border/40 bg-card p-6 text-foreground shadow-lg">
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="text-xs uppercase tracking-[0.2em] text-signal">
-            Live stream
+          <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
+            {streamCopy.eyebrow}
           </p>
           <h2 className="mt-2 text-xl font-semibold text-accent-foreground">
-            Pay-per-second Archer feed
+            {streamCopy.title}
           </h2>
           <p className="mt-2 max-w-xl text-sm text-muted-foreground">
-            Each second signs one EIP-3009 authorization (~$
-            {STREAM_RATE_USDC.toFixed(4)}/s). The meter shows{" "}
+            {streamCopy.body} The meter shows{" "}
             <strong className="text-signal">authorized / verified</strong>{" "}
             volume — settlement batches later on Arc. Demo streams are capped
             to protect the funder wallet.
+            {sourceState === "recent"
+              ? " Source label reflects the most recent stream payment."
+              : ""}
           </p>
         </div>
         {running && (
