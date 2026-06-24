@@ -18,30 +18,31 @@ export function StreamingSection() {
               Pay-per-second streaming over x402
             </h2>
             <p className="mt-8 max-w-[65ch] text-base leading-relaxed text-muted-foreground sm:text-[17px]">
-              There is no native &ldquo;approve a rate&rdquo; primitive on Arc.
-              Quiver composes streaming from discrete per-tick EIP-3009
-              authorizations — one per second — that Circle Gateway verifies
-              instantly and settles in batches.
+              You pay for the seconds you watch. There is no native
+              &ldquo;approve a rate&rdquo; primitive on Arc, so Quiver composes
+              streaming from discrete per-tick EIP-3009 authorizations that
+              Circle Gateway verifies quickly and settles in batches.
             </p>
             <ul className="mt-8 max-w-[65ch] space-y-4 text-base leading-relaxed text-muted-foreground">
               <li>
-                Scout signs a fresh authorization every tick from one ephemeral
-                wallet per session.
+                Scout signs a fresh authorization every second from one
+                ephemeral wallet per session.
               </li>
               <li>
-                Tap-to-stop: no further auths are signed; you pay for exactly
-                the ticks consumed.
+                Tap stop, and signing halts the same instant. No signature
+                means no next-second payment.
               </li>
               <li>
                 <span className="font-mono text-foreground">
                   ticks × rate = total
                 </span>{" "}
-                — the exact-cost invariant, always visible on the dashboard.
+                — the dashboard reconciles to verified stream rows, never a
+                cached guess.
               </li>
             </ul>
             <p className="mt-8 max-w-[65ch] text-base leading-relaxed text-muted-foreground">
               Surface authorized / verified volume, not settled — verification
-              is sub-500ms; batch settlement lags.
+              feels live while batch settlement can lag.
             </p>
             <div className="mt-10 flex flex-wrap gap-4">
               <Button

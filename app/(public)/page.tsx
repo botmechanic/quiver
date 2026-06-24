@@ -18,6 +18,7 @@
 
 import { LandingNav } from "@/components/landing/landing-nav";
 import { HeroSection } from "@/components/landing/hero-section";
+import { TwoSurfacesSection } from "@/components/landing/two-surfaces-section";
 import { HowItWorks } from "@/components/landing/how-it-works";
 import { StreamingSection } from "@/components/landing/streaming-section";
 import { ProofStrip } from "@/components/landing/proof-strip";
@@ -31,6 +32,7 @@ export default function LandingPage() {
     <>
       <LandingNav />
       <HeroSection />
+      <TwoSurfacesSection />
       <HowItWorks />
       <StreamingSection />
       <ProofStrip />

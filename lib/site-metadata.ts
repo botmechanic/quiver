@@ -30,7 +30,7 @@ export function getSiteUrl(): URL {
 export const siteName = "Quiver";
 
 export const siteDescription =
-  "Two AI agents settling real testnet USDC at sub-cent scale over x402 on Arc. Headline: pay-per-second streaming with per-tick EIP-3009 auths batched by Circle Gateway.";
+  "A per-second x402 settlement rail on Arc. Quiver meters exact seconds with per-tick EIP-3009 auths, using Archer and Scout as the agent demo and an Owncast sidecar as the creator deployment surface.";
 
 export const siteKeywords = [
   "Quiver",
@@ -40,6 +40,8 @@ export const siteKeywords = [
   "nanopayments",
   "USDC",
   "streaming payments",
+  "creator payments",
+  "Owncast",
   "AI agents",
   "EIP-3009",
   "Lepton Agents Hackathon",
