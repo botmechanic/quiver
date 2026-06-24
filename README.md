@@ -8,7 +8,7 @@ Quiver is a per-second x402 settlement rail on Arc. Archer and Scout are the age
 
 Quiver is a Lepton Agents Hackathon project built on the `circlefin/arc-nanopayments` starter. It bills for exactly the seconds consumed and stops the instant signing stops, composing a streaming rail from per-tick EIP-3009 authorizations that Circle Gateway batches on Arc testnet. **Archer** is the seller agent: it produces strategy signals, prices each request dynamically, protects them behind x402, and receives USDC through Circle Gateway. **Scout** is the buyer agent: it runs on a funder-level USDC budget, evaluates Archer's quoted price and confidence per call, and buys or declines with a logged reason.
 
-**Live deploy:** [https://quiver-self.vercel.app](https://quiver-self.vercel.app) · **Public demo:** [https://quiver-self.vercel.app/try](https://quiver-self.vercel.app/try)
+**Official domain:** [https://getquiver.xyz](https://getquiver.xyz) · **Public demo:** [https://getquiver.xyz/try](https://getquiver.xyz/try)
 
 ## Why It Matters
 
@@ -87,7 +87,7 @@ Each 402 includes `extensions.quiver` with `price_usdc`, `price_reason`, and `co
 Scout runs locally against the deployed seller:
 
 ```bash
-BASE_URL=https://quiver-self.vercel.app npm run agent -- --limit 0.01
+BASE_URL=https://getquiver.xyz npm run agent -- --limit 0.01
 ```
 
 **Decision rule (one sentence):** Scout buys when confidence ≥ 0.45 and quoted price ≤ confidence × remaining funder budget; otherwise it declines and logs why.
@@ -101,7 +101,7 @@ Streaming is **many discrete per-tick EIP-3009 authorizations** (not a native ra
 **Scout CLI** (local, funder-funded):
 
 ```bash
-BASE_URL=https://quiver-self.vercel.app npm run stream -- --ticks 10
+BASE_URL=https://getquiver.xyz npm run stream -- --ticks 10
 # Options: --limit 0.01 (USDC cap)  --interval 1000 (ms between tick completions)
 ```
 
@@ -151,7 +151,7 @@ Public page: **`/try`** — no wallet, one click.
 - Settlements are **real** but tagged `demo` in `payment_events.raw.source` — not counted as distinct paying visitors.
 - Rate-limited per IP (`DEMO_RATE_LIMIT_SECONDS`, default 30s) to protect the funder wallet. This is an in-memory, per-instance testnet guardrail; it is honest demo protection, not production abuse prevention.
 
-Share **`https://quiver-self.vercel.app/try`** for traction outreach.
+Share **`https://getquiver.xyz/try`** for traction outreach.
 
 ## Getting Started
 
@@ -184,7 +184,7 @@ ADMIN_EMAIL=your-dashboard-email
 ADMIN_PASSWORD=your-dashboard-password
 SELLER_ADDRESS=0xYourSellerWalletAddress
 SELLER_PRIVATE_KEY=0xYourSellerPrivateKey
-BASE_URL=https://quiver-self.vercel.app
+BASE_URL=https://getquiver.xyz
 BUYER_PRIVATE_KEY=0xYourBuyerFunderPrivateKey
 DEMO_RATE_LIMIT_SECONDS=30
 DEMO_DEPOSIT_AMOUNT=0.01
@@ -216,14 +216,14 @@ The dashboard shows:
 
 ## Judge Walkthrough
 
-1. Open [https://quiver-self.vercel.app/try](https://quiver-self.vercel.app/try) and click **Buy Archer signal (demo)**.
+1. Open [https://getquiver.xyz/try](https://getquiver.xyz/try) and click **Buy Archer signal (demo)**.
 2. Confirm the result shows the settled USDC amount, Archer's price reason, the trace hash, and an Arcscan transaction link when a transaction hash is available.
 3. Sign in to `/dashboard` with the provided operator credentials and confirm the payment row is tagged `demo`.
 4. Start the **Pay-per-second Archer feed**, let a few ticks land, then stop it. The invariant should read `ticks × $0.0001 = total` using verified `stream_events`.
 5. Run Scout locally against production to show agentic buy/decline decisions:
 
 ```bash
-BASE_URL=https://quiver-self.vercel.app npm run agent -- --limit 0.01
+BASE_URL=https://getquiver.xyz npm run agent -- --limit 0.01
 ```
 
 6. Before recording or submitting, run `npm run verify:demo-readiness` locally.
@@ -231,12 +231,12 @@ BASE_URL=https://quiver-self.vercel.app npm run agent -- --limit 0.01
 
 ## Deployment
 
-Quiver deploys on Vercel with cloud Supabase.
+Quiver deploys on Vercel with cloud Supabase. The official public domain is `getquiver.xyz`; the Vercel project remains the hosting target.
 
-1. Set all Vercel env vars above (use your **stable** production domain for `BASE_URL`, not a preview URL).
+1. Set all Vercel env vars above (use `BASE_URL=https://getquiver.xyz`, not a preview URL).
 2. Push to `main` — Vercel redeploys automatically.
 3. Verify live:
-   - [https://quiver-self.vercel.app/try](https://quiver-self.vercel.app/try) loads and settles a demo buy
+   - [https://getquiver.xyz/try](https://getquiver.xyz/try) loads and settles a demo buy
    - Rapid repeat clicks return `429`
    - Scout run tags payments `scout` with dynamic prices
    - Dashboard splits demo / Scout / stream metrics

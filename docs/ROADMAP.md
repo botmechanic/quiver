@@ -27,9 +27,9 @@ Legend: ✅ done · ⏳ in flight / pending · ⬜ not started
 
 ## Immediate next action — Release `/try` & traction outreach
 
-Blocks 4–6 are deployed to [quiver-self.vercel.app](https://quiver-self.vercel.app). Streaming is also live; keep confirming live behavior and **ship the `/try` link** for traction.
+Blocks 4–6 are deployed on Vercel; `getquiver.xyz` is the official public domain while DNS finishes propagating. Streaming is also live; keep confirming live behavior and **ship the `/try` link** for traction.
 
-- [x] Set/confirm Vercel env vars: `BASE_URL` (**stable prod domain, not a preview URL**), `DEMO_RATE_LIMIT_SECONDS=30`, `DEMO_DEPOSIT_AMOUNT=0.01`; existing keys unchanged.
+- [x] Set/confirm Vercel env vars: `BASE_URL=https://getquiver.xyz` (**stable prod domain, not a preview URL**), `DEMO_RATE_LIMIT_SECONDS=30`, `DEMO_DEPOSIT_AMOUNT=0.01`; existing keys unchanged.
 - [x] Deploy. (No migration required — source tag lives in `payment_events.raw` as `demo` / `scout`.)
 - [ ] Live verify on the deployed URL:
   - [x] `/try` loads and demo buy settles (dynamic price + recomputable trace)
@@ -38,7 +38,7 @@ Blocks 4–6 are deployed to [quiver-self.vercel.app](https://quiver-self.vercel
   - [ ] Scout run → `scout`-sourced rows with dynamic prices in the 402/reason
   - [x] Stream meter reads verified tick counts from `stream_events` and aligns the session row on stop
   - [x] Confirm `/try` calls the **deployed** Archer endpoints, not localhost/preview
-- [ ] **Release `https://quiver-self.vercel.app/try` in the hackathon Discord + ATC/Skool.** This *is* the traction event — every demo buy from here is a real, honestly-labeled data point.
+- [ ] **Release `https://getquiver.xyz/try` in the hackathon Discord + ATC/Skool.** This *is* the traction event — every demo buy from here is a real, honestly-labeled data point.
 - [ ] Submit/refresh the v0 on the hackathon form.
 
 Owncast sidecar boundary: verified locally against Owncast `0.2.5`; `CHAT` starts the stream, `USER_PARTED` closes it, and connected-client heartbeat is the fallback. Do not claim `USER_JOINED` as the start event unless a target deployment proves it fires.
@@ -84,7 +84,7 @@ The one axis no prior-cohort winner occupied. Highest variance — protect this 
 - [x] **Scout decisions on dashboard:** `scout_decisions` table (separate from `payment_events`); agent persists every buy/decline; dashboard panel with realtime feed + policy-style reason strings.
 - [x] Apply `20260318110000` + `20260318110001` migrations; confidence + budget declines verified on panel.
 - [x] **Confidence gate fix:** Archer trace no longer floors confidence at 0.45 (`abs(score)` artifact); Scout confidence declines verified end-to-end.
-- [x] Deploy dashboard + strategy fix to `quiver-self.vercel.app`.
+- [x] Deploy dashboard + strategy fix to `getquiver.xyz`.
 - [ ] Dashboard polish: live money-flow + streaming meter reading cleanly together; demo/scout split legible to a stranger.
 - [ ] **Optional upside — only if streaming + traction are already solid:**
   - [ ] Onchain anchoring of the reasoning-trace hash (beyond the simple recomputable hash).
@@ -101,7 +101,7 @@ The one axis no prior-cohort winner occupied. Highest variance — protect this 
 - [x] **Stage 1 creator copy:** position Quiver as a per-second rail with an Owncast sidecar verified locally; use the precise `CHAT` start / `USER_PARTED` close / heartbeat fallback wording.
 - [ ] **Traction numbers:** fill the form honestly — demo buys and real agent payments reported *separately*. Bar to beat: the comparable's ~19 payers / sub-dollar.
 - [ ] **Read-only judge access:** add `/judge` or `/dashboard/judge` gated by `JUDGE_ACCESS_TOKEN`; show proof surfaces only (metrics, payments, Scout decisions, stream events, Obol validation, Arcscan links) and hide/disable withdrawals, Gateway controls, demo buy, and stream start/stop. Prefer this over passkeys for final submission: lower risk, easier for judges, and no operator controls exposed.
-- [ ] **Polish (cheap, high-signal):** GitHub repo description + topics; tag a release; confirm dashboard renders for a logged-out/first-time judge; consider a cleaner domain over `quiver-self.vercel.app` (you own `VendingMachine.money`) — DNS change only, day-13 polish.
+- [ ] **Polish (cheap, high-signal):** GitHub repo description + topics; tag a release; confirm dashboard renders for a logged-out/first-time judge; finish DNS/Vercel verification for `getquiver.xyz`.
 - [ ] **Final submission before the June 29 deadline.** Submit early and often — resubmission is free.
 
 ---

@@ -132,7 +132,7 @@ async function main() {
   const supabaseUrl = requireEnv("NEXT_PUBLIC_SUPABASE_URL");
   const supabaseKey = requireEnv("SUPABASE_SERVICE_ROLE_KEY");
   const baseUrl = normalizeBaseUrl(
-    process.env.BASE_URL ?? "https://quiver-self.vercel.app",
+    process.env.BASE_URL ?? "https://getquiver.xyz",
   );
   const targetUrl = `${baseUrl}/api/archer/market-state`;
 

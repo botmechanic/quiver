@@ -6,6 +6,8 @@ This manual is the practical source of truth for operating, demoing, and explain
 
 Quiver is a per-second x402 settlement rail on Arc.
 
+The official public domain is `https://getquiver.xyz`. DNS is still propagating; Vercel remains the hosting provider.
+
 The product now has two surfaces:
 
 - **Agents:** Archer sells priced signals; Scout decides whether to buy. This is the autonomous agent demo.
@@ -194,6 +196,14 @@ Open `http://localhost:8080`, join chat, and send a message. The sidecar should:
 - pay `GET /api/archer/stream`
 - write a `stream_events` row
 - stop on `USER_PARTED` or heartbeat disappearance
+
+For production-facing commands that target deployed Archer, use:
+
+```bash
+BASE_URL=https://getquiver.xyz
+```
+
+Keep `BASE_URL=http://localhost:3000` only for local app runs.
 
 ## Verification Runbooks
 

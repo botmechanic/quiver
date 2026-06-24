@@ -109,7 +109,7 @@ const ARC_TESTNET_USDC = "0x3600000000000000000000000000000000000000" as const;
 const ARC_TESTNET_RPC = "https://rpc.testnet.arc.network";
 
 const BASE_URL = normalizeBaseUrl(process.env.BASE_URL ?? "http://localhost:3000");
-const DEFAULT_PROD_ARCHER = "https://quiver-self.vercel.app";
+const DEFAULT_PROD_ARCHER = "https://getquiver.xyz";
 
 async function assertArcherReachable(baseUrl: string): Promise<void> {
   const probeUrl = `${baseUrl}/api/archer/market-state`;
