@@ -184,8 +184,8 @@ function HeadlineProofRow({ events }: { events: PaymentEvent[] }) {
 
     return {
       scoutPayers: scoutPayers.size,
-      totalSettlements: events.length,
-      totalVolume: formatUsdcTotal(events),
+      scoutSettlements: scoutEvents.length,
+      scoutVolume: formatUsdcTotal(scoutEvents),
     };
   }, [events]);
 
@@ -197,15 +197,15 @@ function HeadlineProofRow({ events }: { events: PaymentEvent[] }) {
         detail="Scout payer wallets only; demo-funded clicks excluded"
       />
       <ProofStat
-        label="All verified settlements"
-        value={String(stats.totalSettlements)}
-        detail="Demo, Scout, and stream rows; source split below"
+        label="Scout settlements"
+        value={String(stats.scoutSettlements)}
+        detail="Agent buyer payments only; demo and stream excluded"
         verified
       />
       <ProofStat
-        label="All-source volume"
-        value={`$${stats.totalVolume}`}
-        detail="Demo + Scout + stream testnet USDC; not distinct payer count"
+        label="Scout volume"
+        value={`$${stats.scoutVolume}`}
+        detail="Agent-paid testnet USDC; total activity split below"
       />
     </section>
   );
