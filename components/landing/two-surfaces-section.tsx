@@ -1,7 +1,7 @@
 const SURFACES = [
   {
     title: "Agents",
-    body: "Archer prices each signal and Scout decides per call whether it is worth buying, settling sub-cent over x402. This is the autonomous demo of the rail.",
+    body: "Archer prices each signal and Scout decides per call whether it is worth buying. This is the autonomous demo that proves the rail works today.",
   },
   {
     title: "Creators",
@@ -22,8 +22,7 @@ export function TwoSurfacesSection() {
           </h2>
           <p className="mt-8 max-w-[65ch] text-base leading-relaxed text-muted-foreground sm:text-[17px]">
             The primitive is the product: a second-by-second payment loop that
-            can meter software calls or chat-active presence without a native
-            rate primitive on Arc.
+            can meter agent work today and chat-active creator presence next.
           </p>
         </div>
 

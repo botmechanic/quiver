@@ -12,21 +12,20 @@ export function StreamingSection() {
         <div className="grid gap-14 lg:grid-cols-2 lg:items-center lg:gap-16">
           <div>
             <p className="text-xs font-medium uppercase tracking-[0.18em] text-primary/70">
-              Headline feature
+              Per-second proof
             </p>
             <h2 className="font-display mt-6 text-4xl leading-[1.1] text-foreground sm:text-5xl">
-              Pay-per-second streaming over x402
+              Watch the meter stop when the stream stops
             </h2>
             <p className="mt-8 max-w-[65ch] text-base leading-relaxed text-muted-foreground sm:text-[17px]">
-              You pay for the seconds you watch. There is no native
-              &ldquo;approve a rate&rdquo; primitive on Arc, so Quiver composes
-              streaming from discrete per-tick EIP-3009 authorizations that
-              Circle Gateway verifies quickly and settles in batches.
+              The shipped stream is the cleanest proof of the rail: Scout pays
+              one tiny tick at a time, the live meter counts verified seconds,
+              and stop means no next-second payment.
             </p>
             <ul className="mt-8 max-w-[65ch] space-y-4 text-base leading-relaxed text-muted-foreground">
               <li>
-                Scout signs a fresh authorization every second from one
-                ephemeral wallet per session.
+                One session wallet funds the stream; Scout signs only while the
+                stream is running.
               </li>
               <li>
                 Tap stop, and signing halts the same instant. No signature
@@ -49,14 +48,14 @@ export function StreamingSection() {
                 asChild
                 className="px-6 font-semibold transition-transform hover:brightness-105 active:translate-y-px"
               >
-                <Link href="/try">Try a discrete settlement</Link>
+                <Link href="/dashboard">Live stream meter</Link>
               </Button>
               <Button
                 asChild
                 variant="outline"
                 className="border-border/40 px-6 text-foreground hover:border-border/60 hover:bg-transparent hover:text-primary"
               >
-                <Link href="/dashboard">Live stream meter</Link>
+                <Link href="/try">Try a settlement</Link>
               </Button>
             </div>
           </div>

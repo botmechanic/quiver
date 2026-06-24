@@ -1,15 +1,15 @@
 const STEPS = [
   {
     step: "01",
-    title: "Price the second",
-    body: "Each billable moment becomes an x402 price: one signal, one stream tick, or one future viewer-second behind a creator server.",
-    mechanic: "HTTP 402 + dynamic PAYMENT-REQUIRED header",
+    title: "Quote the usage",
+    body: "Each billable moment becomes an x402 quote: one signal, one stream tick, or one future chat-active creator interval.",
+    mechanic: "HTTP 402 + dynamic PAYMENT-REQUIRED header on Arc",
   },
   {
     step: "02",
-    title: "Authorize the tick",
-    body: "The buyer signs a fresh EIP-3009 authorization for the current tick. Stop the stream, and no new authorization is signed.",
-    mechanic: "One session wallet + one per-tick authorization",
+    title: "Authorize the second",
+    body: "The buyer signs a fresh EIP-3009 authorization for the current second. Stop the stream, and no new authorization is signed.",
+    mechanic: "One session wallet + one authorization per tick",
   },
   {
     step: "03",
@@ -34,9 +34,9 @@ export function HowItWorks() {
             Three steps from seconds to settlement
           </h2>
           <p className="mt-8 max-w-[65ch] text-base leading-relaxed text-muted-foreground sm:text-[17px]">
-            Quiver turns elapsed usage into discrete x402 payments. Archer and
-            Scout make that visible with agent decisions today; the same loop is
-            designed for chat-active creator presence next.
+            This is where the protocol shows up: x402 quotes, EIP-3009
+            authorizations, Circle Gateway batching, and Arc testnet settlement.
+            The visitor sees seconds; the rail handles the payment machinery.
           </p>
         </div>
 

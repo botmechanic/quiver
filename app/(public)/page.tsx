@@ -33,8 +33,8 @@ export default function LandingPage() {
       <LandingNav />
       <HeroSection />
       <TwoSurfacesSection />
-      <HowItWorks />
       <StreamingSection />
+      <HowItWorks />
       <ProofStrip />
       <TrySection />
       <LandingFooter />

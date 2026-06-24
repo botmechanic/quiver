@@ -9,16 +9,16 @@ export function HeroSection() {
         <div className="grid items-center gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(260px,44%)] lg:gap-14">
           <div className="relative z-10 py-28 sm:py-32 lg:py-40">
             <p className="text-xs font-medium uppercase tracking-[0.18em] text-primary/70">
-              Per-second payments on Arc
+              Per-second payments
             </p>
             <h1 className="font-display mt-6 max-w-2xl text-5xl leading-[1.05] text-foreground sm:text-6xl lg:text-[4.5rem]">
-              Stream money by the second.
+              Pay by the second. Stop the instant you&apos;re done.
             </h1>
             <p className="mt-8 max-w-[34ch] text-lg leading-8 text-muted-foreground sm:max-w-xl sm:text-xl">
-              Quiver is a pay-per-second settlement rail built on x402 and
-              Circle Gateway. It bills for exactly the seconds consumed and
-              stops the instant you do, composed from per-tick authorizations
-              that Gateway batches onchain.
+              Quiver meters usage by the second and settles it live, billing
+              for exactly the time consumed and stopping the moment it ends. Two
+              AI agents prove it today, settling sub-cent in real time; the same
+              rail is built to meter creator watch-time next.
             </p>
             <div className="mt-10 flex flex-wrap items-center gap-4">
               <Button
@@ -26,7 +26,7 @@ export function HeroSection() {
                 size="lg"
                 className="px-7 font-semibold transition-transform hover:brightness-105 active:translate-y-px"
               >
-                <Link href="/try">See it settle</Link>
+                <Link href="/dashboard">Watch it settle live</Link>
               </Button>
               <Button
                 asChild
@@ -34,7 +34,7 @@ export function HeroSection() {
                 size="lg"
                 className="border-border/40 px-7 text-foreground transition-transform hover:border-border/60 hover:bg-transparent hover:text-primary active:translate-y-px"
               >
-                <Link href="/dashboard">Watch the live meter</Link>
+                <Link href="/try">Try it yourself</Link>
               </Button>
             </div>
             <p className="mt-8">

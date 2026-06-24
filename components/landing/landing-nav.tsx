@@ -7,8 +7,8 @@ import { QuiverLogo } from "@/components/landing/quiver-logo";
 import { cn } from "@/lib/utils";
 
 const NAV_LINKS = [
-  { href: "/#how-it-works", label: "How it works" },
   { href: "/#streaming", label: "Streaming" },
+  { href: "/#how-it-works", label: "How it works" },
   { href: "/dashboard", label: "Dashboard" },
 ] as const;
 
